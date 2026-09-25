@@ -121,6 +121,12 @@ PLUGIN_SOURCE_PATH_RE = re.compile(r"^[A-Za-z0-9._~/%+-]+$")
 PLUGIN_SOURCE_SCP_RE = re.compile(r"^([A-Za-z0-9._-]+)@([A-Za-z0-9.-]+):([A-Za-z0-9._~/%+-]+)$")
 PLUGIN_COMMIT_RE = re.compile(r"^[0-9a-f]{40}([0-9a-f]{24})?$")
 PLUGIN_TERMINAL_LAUNCHER = "omarchy-launch-floating-terminal-with-presentation"
+# Extra file/dir mappings declared in the repo marker ("sync_paths"). Bounded
+# so a hostile or fat-fingered marker cannot balloon the inventory.
+MAX_CUSTOM_SYNC_PATHS = 64
+# Built-in sync trees; a custom mapping may not shadow them or the marker
+# itself, so the meaning of a repo path stays unambiguous.
+CUSTOM_SYNC_RESERVED_ROOTS = frozenset({"hypr", "omarchy", "plugins", "bin", "terminals"})
 
 
 class SyncError(Exception):
@@ -586,6 +592,87 @@ def machine_local_paths(repo: Path | None = None) -> set[str]:
         if isinstance(item, str) and validate_safe_rel_path(item):
             paths.add(item)
     return paths
+
+
+def _expand_home_path(raw: str, home: Path) -> Path:
+    text = raw.strip()
+    if text == "~":
+        return home
+    if text.startswith("~/"):
+        return home / text[2:]
+    return Path(text)
+
+
+def custom_sync_paths(ctx: Context, repo: Path) -> list[tuple[str, Path]]:
+    """Extra repo <-> machine mappings declared in the repo marker.
+
+    The marker's ``sync_paths`` list lets a config repo carry arbitrary
+    files that are not part of the built-in Omarchy trees, for example an
+    app config or a dotfile::
+
+        "sync_paths": [
+            {"repo": "configs/zkey", "local": "~/.config/zkey"},
+            {"repo": "dotfiles/gitconfig", "local": "~/.gitconfig"}
+        ]
+
+    ``repo`` is repo-relative (file or directory); ``local`` is an absolute
+    or ``~/`` path. Directory entries are walked recursively on both sides,
+    so new files appear on either machine. Entries that would escape
+    ``$HOME`` or shadow a built-in tree are ignored, mirroring how
+    ``machine_local`` rejects escapes.
+    """
+    marker = load_json(repo / MARKER_NAME, default={}, within=repo)
+    raw = marker.get("sync_paths") if isinstance(marker, dict) else None
+    if not isinstance(raw, list):
+        return []
+    home_resolved = ctx.home.resolve()
+    out: list[tuple[str, Path]] = []
+    seen: set[str] = set()
+    for entry in raw[:MAX_CUSTOM_SYNC_PATHS]:
+        if not isinstance(entry, dict):
+            continue
+        repo_raw = entry.get("repo")
+        local_raw = entry.get("local")
+        if not isinstance(repo_raw, str) or not isinstance(local_raw, str):
+            continue
+        repo_text = repo_raw.strip()
+        if repo_text.startswith("/") or repo_text.startswith("\\") or repo_text.startswith("-"):
+            continue
+        trailing_slash = repo_text.endswith("/")
+        repo_rel = repo_text.rstrip("/")
+        if not validate_safe_rel_path(repo_rel):
+            continue
+        if repo_rel == MARKER_NAME or repo_rel.split("/", 1)[0] in CUSTOM_SYNC_RESERVED_ROOTS:
+            continue
+        local_text = local_raw.strip()
+        if not local_text or local_text.startswith("-"):
+            continue
+        local = _expand_home_path(local_text, ctx.home)
+        if not local.is_absolute():
+            continue
+        try:
+            if not local.resolve().is_relative_to(home_resolved):
+                continue
+        except OSError:
+            continue
+        repo_path = repo / repo_rel
+        is_dir = trailing_slash or repo_path.is_dir() or local.is_dir()
+        if not is_dir:
+            if repo_rel not in seen:
+                seen.add(repo_rel)
+                out.append((repo_rel, local))
+            continue
+        rels: set[str] = set()
+        for path in iter_files(repo_path):
+            rels.add(repo_rel + "/" + rel_posix(path, repo_path))
+        for path in iter_files(local):
+            rels.add(repo_rel + "/" + rel_posix(path, local))
+        for rel in sorted(rels):
+            if rel in seen or not validate_safe_rel_path(rel):
+                continue
+            seen.add(rel)
+            out.append((rel, local / rel[len(repo_rel) + 1 :]))
+    return out
 
 
 def validate_safe_rel_path(rel: str) -> bool:
@@ -1836,7 +1923,14 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
     home_resolved = ctx.home.resolve()
     local_paths = machine_local_paths(repo)
 
-    def add(rel: str, local: Path, repo_file: Path, group: str, extra: dict[str, Any] | None = None) -> None:
+    def add(
+        rel: str,
+        local: Path,
+        repo_file: Path,
+        group: str,
+        extra: dict[str, Any] | None = None,
+        summary: str | None = None,
+    ) -> None:
         if not validate_safe_rel_path(rel):
             return
         if is_local_overlay_rel(rel):
@@ -1868,7 +1962,7 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
         items[rel] = {
             "path": rel,
             "group": group,
-            "summary": summary_for(rel),
+            "summary": summary or summary_for(rel),
             "portable": not is_machine_local(rel, local_paths),
             "local_path": str(local),
             "repo_path": str(repo_file),
@@ -1983,6 +2077,9 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
             rels.add(f"omarchy/themes/{slug}/" + rel_posix(p, local_overlay))
         for rel in sorted(rels):
             add(rel, ctx.home / ".config" / rel, repo / rel, "theme")
+
+    for rel, local_path in custom_sync_paths(ctx, repo):
+        add(rel, local_path, repo / rel, "custom", summary=f"Custom config ({rel})")
 
     return [items[k] for k in sorted(items)]
 
@@ -3257,7 +3354,7 @@ def inspect_repo(ctx: Context, repo: Path, prefer_local: bool = False) -> dict[s
     configs = []
     for item in collect_inventory(ctx, repo):
         wanted = item["local_exists"] if prefer_local else item["repo_exists"]
-        if item["group"] in {"hypr", "omarchy", "terminal"} and wanted:
+        if item["group"] in {"hypr", "omarchy", "terminal", "custom"} and wanted:
             configs.append(
                 {
                     "path": item["path"],

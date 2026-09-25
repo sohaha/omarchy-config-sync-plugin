@@ -112,6 +112,8 @@ Open **Review list** (or the Changes tab) and expand **Outgoing**. It holds:
 
 **Machine-local files** stay on this machine: display layout (`hypr/monitors.lua`) and anything you list as `machine_local` in `.omarchy-config.json`. Overlay files named `*.local.lua` / `local.conf` under `hypr/` are not synced at all. Turn on **Include machine-local files** on the Changes tab only if you mean it.
 
+**Extra config files** outside the built-in trees can be synced by listing `repo` `↔` `local` pairs under `sync_paths` in `.omarchy-config.json` (see [README.md](README.md)). They appear on the Changes tab under **Other Configs**; `local` must stay inside `$HOME`.
+
 When it looks right, click **Seed repo (N items)** on the Overview card. Confirm with **Seed & push**. The plugin copies those files into the private repo, commits, and pushes.
 
 Your GitHub repo should now contain `hypr/`, `omarchy/`, `plugins/`, and so on — still **private**.

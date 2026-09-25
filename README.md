@@ -88,6 +88,36 @@ A plugin folder with a `.git` checkout is never copied in either direction, so A
 
 Repos that already hold copied files for a git plugin under `plugins/<id>/` stop applying them. Publishing that plugin's list entry removes the copy from the repo. Plugins without `.git` (your own, or a clone of a built-in) keep syncing file by file.
 
+### Extra config files (`sync_paths`)
+
+Anything outside those trees can be synced too. List repo `↔` machine mappings
+in the config repo's `.omarchy-config.json`:
+
+```json
+{
+  "format": "omarchy-config",
+  "version": 1,
+  "synced_by": "gladimdim.config-sync",
+  "sync_paths": [
+    { "repo": "configs/zkey", "local": "~/.config/zkey" },
+    { "repo": "dotfiles/gitconfig", "local": "~/.gitconfig" }
+  ]
+}
+```
+
+- `repo` is a repo-relative file or directory (scope it tightly; a directory is
+  walked recursively, on both sides).
+- `local` is an absolute path or one starting with `~/`.
+- Each mapping shows up on the Changes tab under **Other Configs**, and Apply /
+  Publish / Keep-local / Take-repo work exactly like built-in configs.
+- The built-in trees (`hypr/`, `omarchy/`, `plugins/`, `bin/`, `terminals/`) are
+  reserved: a mapping cannot shadow them, and `local` must stay inside `$HOME`.
+  Files that need root (for example `/etc/keyd/default.conf`) are still a
+  one-time per-machine step.
+
+The plugin copies `sync_paths` into the repo untouched when you Publish, so the
+mapping travels with the config it describes.
+
 Machine-local files are **not** applied unless you enable **Include machine-local files**:
 
 - `hypr/monitors.lua` (display layout)

@@ -2679,6 +2679,105 @@ class MachineLocalOverlayTests(unittest.TestCase):
         self.assertFalse(cs.is_machine_local("hypr/input.lua"))
 
 
+class CustomSyncPathTests(unittest.TestCase):
+    def _write_marker(self, repo: Path, sync_paths: list) -> None:
+        write(
+            repo / cs.MARKER_NAME,
+            json.dumps(
+                {
+                    "format": cs.MARKER_FORMAT,
+                    "version": 1,
+                    "synced_by": cs.PLUGIN_ID,
+                    "sync_paths": sync_paths,
+                }
+            )
+            + "\n",
+        )
+
+    def test_custom_file_and_directory_roundtrip(self) -> None:
+        with TempHome() as env:
+            repo = make_config_repo(env.home / "cfg")
+            self._write_marker(
+                repo,
+                [
+                    {"repo": "configs/zkey", "local": "~/.config/zkey"},
+                    {"repo": "dotfiles/gitconfig", "local": "~/.gitconfig"},
+                ],
+            )
+            write(repo / "configs" / "zkey" / "config.toml", "speed = 10\n")
+            write(repo / "configs" / "zkey" / "nested" / "extra.conf", "x=1\n")
+            write(repo / "dotfiles" / "gitconfig", "[user]\n")
+            commit_all(repo, "custom paths")
+
+            snap = cs.cmd_connect(env.ctx, argparse_ns(args=[str(repo)]))
+            self.assertTrue(snap["ok"], snap)
+            paths = [f["path"] for f in snap["diff"]["files"]]
+            self.assertIn("configs/zkey/config.toml", paths)
+            self.assertIn("dotfiles/gitconfig", paths)
+
+            applied = cs.cmd_apply(env.ctx, argparse_ns())
+            self.assertTrue(applied["ok"], applied)
+            self.assertIn("configs/zkey/config.toml", applied["applied"])
+            self.assertIn("configs/zkey/nested/extra.conf", applied["applied"])
+            self.assertIn("dotfiles/gitconfig", applied["applied"])
+            self.assertEqual((env.home / ".config" / "zkey" / "config.toml").read_text(encoding="utf-8"), "speed = 10\n")
+            self.assertEqual((env.home / ".config" / "zkey" / "nested" / "extra.conf").read_text(encoding="utf-8"), "x=1\n")
+            self.assertEqual((env.home / ".gitconfig").read_text(encoding="utf-8"), "[user]\n")
+
+            # A local edit flows back through the same mapping on publish.
+            write(env.home / ".config" / "zkey" / "config.toml", "speed = 99\n")
+            pub = cs.cmd_publish(env.ctx, argparse_ns())
+            self.assertTrue(pub["ok"], pub)
+            self.assertIn("configs/zkey/config.toml", pub["published"])
+            self.assertEqual((repo / "configs" / "zkey" / "config.toml").read_text(encoding="utf-8"), "speed = 99\n")
+
+    def test_custom_local_only_file_publishes_into_mapped_dir(self) -> None:
+        with TempHome() as env:
+            repo = make_config_repo(env.home / "cfg")
+            self._write_marker(repo, [{"repo": "configs/app", "local": "~/.config/app"}])
+            commit_all(repo, "custom dir mapping")
+            write(env.home / ".config" / "app" / "settings.json", '{"a":1}\n')
+
+            snap = cs.cmd_connect(env.ctx, argparse_ns(args=[str(repo)]))
+            self.assertTrue(snap["ok"], snap)
+            pub = cs.cmd_publish(env.ctx, argparse_ns())
+            self.assertTrue(pub["ok"], pub)
+            self.assertIn("configs/app/settings.json", pub["published"])
+            self.assertEqual((repo / "configs" / "app" / "settings.json").read_text(encoding="utf-8"), '{"a":1}\n')
+
+    def test_custom_sync_paths_reject_escapes_and_reserved_roots(self) -> None:
+        with TempHome() as env:
+            repo = make_config_repo(env.home / "cfg")
+            self._write_marker(
+                repo,
+                [
+                    {"repo": "configs/ok.conf", "local": "~/.config/ok.conf"},
+                    {"repo": "../etc/passwd", "local": "~/.config/passwd"},
+                    {"repo": "/etc/passwd", "local": "~/.config/passwd2"},
+                    {"repo": "hypr/evil.conf", "local": "~/.config/hypr/evil.conf"},
+                    {"repo": "plugins/evil.conf", "local": "~/.config/evil.conf"},
+                    {"repo": "configs/outside.conf", "local": "/etc/outside.conf"},
+                    {"repo": "configs/relative.conf", "local": "relative.conf"},
+                    {"repo": cs.MARKER_NAME, "local": "~/.config/marker"},
+                    "not-a-dict",
+                ],
+            )
+            write(repo / "configs" / "ok.conf", "ok\n")
+            paths = dict(cs.custom_sync_paths(env.ctx, repo))
+            self.assertEqual(list(paths.keys()), ["configs/ok.conf"])
+            self.assertEqual(paths["configs/ok.conf"], env.home / ".config" / "ok.conf")
+
+    def test_custom_config_appears_in_inspect(self) -> None:
+        with TempHome() as env:
+            repo = make_config_repo(env.home / "cfg")
+            self._write_marker(repo, [{"repo": "configs/app", "local": "~/.config/app"}])
+            write(repo / "configs" / "app" / "settings.json", '{"a":1}\n')
+            commit_all(repo, "custom inspect")
+            inspect = cs.inspect_repo(env.ctx, repo)
+            custom = [c for c in inspect["configs"] if c["group"] == "custom"]
+            self.assertEqual([c["path"] for c in custom], ["configs/app/settings.json"])
+
+
 class PluginVersionTests(unittest.TestCase):
     def test_plugin_version_matches_manifest(self) -> None:
         """The helper reports its own version to the panel, so a release that
