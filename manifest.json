@@ -5,7 +5,7 @@
   "version": "1.4.1",
   "author": "Dmytro Gladkyi",
   "license": "MIT",
-  "description": "Seamlessly sync all your Omarchy configurations, shortcuts, themes, and plugins between your machines.",
+  "description": "在你的多台机器之间无缝同步全部 Omarchy 配置、快捷键、主题与插件。",
   "kinds": [
     "bar-widget"
   ],
@@ -13,14 +13,16 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Omarchy Config Sync",
-    "description": "Sync all Omarchy configurations between your machines",
+    "displayName": "Omarchy 配置同步",
+    "description": "在你的多台机器之间同步全部 Omarchy 配置",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right",
     "aliases": [
       "config-sync",
       "omarchy-config",
+      "配置同步",
+      "同步配置",
       "sync",
       "settings-sync",
       "dotfiles",

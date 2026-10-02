@@ -67,9 +67,9 @@ Panel {
   readonly property bool pending: syncState === "ready" || syncState === "empty" || syncState === "remote-ahead" || syncState === "local-ahead" || alarming
   readonly property color stateColor: alarming ? urgent : (pending ? accent : foreground)
   readonly property var tabs: [
-    { name: "Overview", icon: "󰘿" },
-    { name: "Changes", icon: "󰦓" },
-    { name: "Configs", icon: "󰒓" }
+    { name: "概览", icon: "󰘿" },
+    { name: "变更", icon: "󰦓" },
+    { name: "配置", icon: "󰒓" }
   ]
   readonly property var allReviewItems: incomingItems.concat(outgoingItems).concat(bothItems)
   // Deletions are opt-in, so they are only ever a surprise if the confirm step stays silent.
@@ -213,7 +213,7 @@ Panel {
   function connectRepo() {
     var url = String(repoUrlInput || "").trim()
     if (!url) {
-      lastError = "Paste a git URL or a local path to your omarchy-config repo."
+      lastError = "粘贴你的 omarchy-config 仓库的 git URL 或本地路径。"
       return
     }
     lastError = ""
@@ -463,7 +463,7 @@ Panel {
     }
     for (i = 0; i < incomingItems.length; i++) {
       b = incomingItems[i]
-      if (b.kind !== "g" || b.typeLabel !== "Plugin" || !isPicked("g", b.itemId)) continue
+      if (b.kind !== "g" || b.typeLabel !== "插件" || !isPicked("g", b.itemId)) continue
       pid = pluginIdFromBundle(b.itemId)
       if (pid && !seen[pid]) { seen[pid] = true; out.push(pid) }
     }
@@ -518,7 +518,7 @@ Panel {
     }
     for (i = 0; i < outgoingItems.length; i++) {
       b = outgoingItems[i]
-      if (b.kind !== "g" || b.typeLabel !== "Plugin" || !isPicked("g", b.itemId)) continue
+      if (b.kind !== "g" || b.typeLabel !== "插件" || !isPicked("g", b.itemId)) continue
       pid = pluginIdFromBundle(b.itemId)
       if (pid && !seen[pid]) { seen[pid] = true; out.push(pid) }
     }
@@ -548,17 +548,17 @@ Panel {
 
   function requestApply() {
     if (unresolvedBoth > 0) {
-      lastError = "Pick Keep local or Take repo for each file that changed on both sides."
+      lastError = "对两侧都有改动的每个文件，选择「保留本机」或「采用仓库」。"
       activeTab = 1
       return
     }
     if (conflictFiles.length > 0) {
-      lastError = "Resolve git merge conflicts before applying."
+      lastError = "请先解决 git 合并冲突再应用。"
       activeTab = 1
       return
     }
     if (selectedApplyFiles().length + selectedApplyShortcuts().length + selectedApplyPlugins().length + selectedBundleFiles("apply").length === 0 && !selectedApplyTheme()) {
-      lastError = "Check the incoming shortcuts, plugins, or files you want to apply."
+      lastError = "勾选要应用的传入快捷键、插件或文件。"
       activeTab = 1
       return
     }
@@ -567,17 +567,17 @@ Panel {
 
   function requestPublish() {
     if (unresolvedBoth > 0) {
-      lastError = "Pick Keep local or Take repo for each file that changed on both sides."
+      lastError = "对两侧都有改动的每个文件，选择「保留本机」或「采用仓库」。"
       activeTab = 1
       return
     }
     if (conflictFiles.length > 0) {
-      lastError = "Resolve git merge conflicts before publishing."
+      lastError = "请先解决 git 合并冲突再发布。"
       activeTab = 1
       return
     }
     if (selectedPublishFiles().length + selectedPublishShortcuts().length + selectedPublishPlugins().length + selectedPublishListPlugins().length + selectedBundleFiles("publish").length === 0 && !selectedPublishTheme() && Number(status.ahead || 0) === 0) {
-      lastError = "Check the local shortcuts, plugins, or files you want to publish."
+      lastError = "勾选要发布的本机快捷键、插件或文件。"
       activeTab = 1
       return
     }
@@ -643,14 +643,14 @@ Panel {
   function saveEditRepo() {
     var url = String(repoUrlInput || "").trim()
     if (!url) {
-      lastError = "Paste a git URL or a local path to the config repo."
+      lastError = "粘贴配置仓库的 git URL 或本地路径。"
       return
     }
     var current = String((status && status.repo_url) || "").replace(/\/+$/, "").replace(/\.git$/, "")
     var next = url.replace(/\/+$/, "").replace(/\.git$/, "")
     if (current && (next === current || next === current + ".git" || current === next + ".git")) {
       editingRepo = false
-      lastMessage = "Already linked to that repo."
+      lastMessage = "已链接到该仓库。"
       return
     }
     confirmKind = "switch-repo"
@@ -747,22 +747,22 @@ Panel {
     busy = false
     var raw = String(text || "").trim()
     if (!raw) {
-      lastError = "The sync helper returned no output."
+      lastError = "同步助手没有返回输出。"
       return
     }
     if (raw.length > 5 * 1024 * 1024) {
-      lastError = "Sync response exceeded maximum buffer size limit (5MB)."
+      lastError = "同步响应超出缓冲区上限（5MB）。"
       return
     }
     var data
     try {
       data = JSON.parse(raw)
     } catch (e) {
-      lastError = "Could not parse sync helper output."
+      lastError = "无法解析同步助手的输出。"
       return
     }
     if (!data.ok) {
-      lastError = String(data.error || "Sync failed.")
+      lastError = String(data.error || "同步失败。")
       if (data.both) activeTab = 1
       if (data.conflicts && data.conflicts.length > 0) {
         status = Object.assign({}, status, { conflicts: data.conflicts, sync_state: "conflicts", configured: true })
@@ -841,8 +841,8 @@ Panel {
     bar: root.bar
     text: "󰘿"
     tooltipText: configured
-      ? ("Config Sync — " + Model.stateTitle(root.syncState))
-      : "Config Sync — link your omarchy-config repo"
+      ? ("配置同步 — " + Model.stateTitle(root.syncState))
+      : "配置同步 — 链接你的 omarchy-config 仓库"
     onPressed: function(b) {
       if (b === Qt.RightButton) root.refresh(true)
       else root.toggle()
@@ -933,7 +933,7 @@ Panel {
               Text {
                 id: heroTitle
                 textFormat: Text.PlainText
-                text: root.configured ? Model.repoName(root.status.repo_url) : "Config Sync"
+                text: root.configured ? Model.repoName(root.status.repo_url) : "配置同步"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.title
@@ -956,7 +956,7 @@ Panel {
             Text {
               textFormat: Text.PlainText
               text: root.busy
-                ? (root.pendingAction === "connect" ? "Fetching and checking the repo…" : "Working…")
+                ? (root.pendingAction === "connect" ? "正在拉取并检查仓库…" : "处理中…")
                 : Model.stateTitle(root.syncState)
               color: root.stateColor
               font.family: root.fontFamily
@@ -976,7 +976,7 @@ Panel {
             Button {
               id: btnRefresh
               iconText: "󰑐"
-              tooltipText: "Refresh (r)"
+              tooltipText: "刷新（r）"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -989,8 +989,8 @@ Panel {
             Button {
               id: btnEdit
               visible: root.configured
-              text: "Edit"
-              tooltipText: "Use a different git repo"
+              text: "编辑"
+              tooltipText: "使用其他 git 仓库"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -1004,7 +1004,7 @@ Panel {
               id: btnClose
               visible: root.configured
               iconText: "󰅖"
-              tooltipText: "Unlink this repo"
+              tooltipText: "取消链接此仓库"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -1058,7 +1058,7 @@ Panel {
             Text {
               width: parent.width
               textFormat: Text.PlainText
-              text: "First time: create a private GitHub repo for your Omarchy configs, then paste its URL here. The plugin will not make that repo public."
+              text: "首次使用：为你的 Omarchy 配置创建一个私有 GitHub 仓库，然后把 URL 粘贴到这里。插件不会把该仓库设为公开。"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -1067,14 +1067,14 @@ Panel {
 
             GuideStep {
               step: "1"
-              title: "Create a private GitHub repo"
-              body: "github.com/new → name it omarchy-config → visibility Private → leave README / .gitignore / license unchecked → Create repository. Private keeps shortcuts, hooks, and scripts off the public internet."
+              title: "创建私有 GitHub 仓库"
+              body: "github.com/new → 命名为 omarchy-config → 可见性选 Private → 不勾选 README / .gitignore / license → 创建仓库。私有可避免快捷键、钩子与脚本暴露到公网。"
             }
 
             Row {
               spacing: Style.space(8)
               Button {
-                text: "Open GitHub"
+                text: "打开 GitHub"
                 iconText: "󰊤"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -1082,21 +1082,21 @@ Panel {
                 onClicked: Quickshell.execDetached(["xdg-open", "https://github.com/new"])
               }
               Button {
-                text: "Copy gh auth login"
-                tooltipText: "The plugin cannot ask for a GitHub password (that would freeze the bar). Paste this in a terminal, finish the browser login, then Connect."
+                text: "复制 gh auth login"
+                tooltipText: "插件无法直接询问 GitHub 密码（会卡死状态栏）。请在终端中粘贴执行，完成浏览器登录后再点「连接」。"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 onClicked: {
                   Quickshell.execDetached(["wl-copy", "gh auth login"])
-                  root.lastMessage = "Copied gh auth login — run it in a terminal, finish the browser login, then come back and Connect."
+                  root.lastMessage = "已复制 gh auth login —— 请在终端中运行并完成浏览器登录，然后回来点击「连接」。"
                 }
               }
             }
 
             GuideStep {
               step: "2"
-              title: "Paste the repo URL"
-              body: "HTTPS (https://github.com/you/omarchy-config.git), SSH, or owner/repo. An empty private repo is what you want on the first machine. On the next machine, paste this same URL and Apply."
+              title: "粘贴仓库 URL"
+              body: "支持 HTTPS（https://github.com/you/omarchy-config.git）、SSH 或 owner/repo。第一台机器需要空的私有仓库；下一台机器粘贴同一 URL 并点击「应用」。"
             }
 
             TextField {
@@ -1120,7 +1120,7 @@ Panel {
             Row {
               spacing: Style.space(8)
               Button {
-                text: root.busy ? "Connecting…" : "Connect repo"
+                text: root.busy ? "连接中…" : "连接仓库"
                 iconText: "󰓦"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -1129,8 +1129,8 @@ Panel {
                 onClicked: root.connectRepo()
               }
               Button {
-                text: "Use this machine's clone"
-                tooltipText: "If you already keep configs in ~/Github/omarchy-config"
+                text: "使用本机的克隆"
+                tooltipText: "如果你的配置已放在 ~/Github/omarchy-config"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 enabled: !root.busy
@@ -1143,8 +1143,8 @@ Panel {
 
             GuideStep {
               step: "3"
-              title: "Review, then Seed repo"
-              body: "Empty repo: the tabs show this machine. Seed repo pushes it to GitHub (still private). Next machine: Connect the same URL and press Apply. Display layout is skipped unless you opt in."
+              title: "检查后发布本机"
+              body: "空仓库：标签页显示的是本机内容。发布会推送到 GitHub（仍为私有）。下一台机器：连接相同 URL 并点击「应用」。除非你主动启用，显示器布局默认跳过。"
             }
           }
         }
@@ -1238,18 +1238,18 @@ Panel {
               width: parent.width
               textFormat: Text.PlainText
               text: root.confirmKind === "apply"
-                ? "Apply the checked incoming shortcuts, plugins, and files onto this machine? A timestamped backup is written first."
+                ? "将勾选的传入快捷键、插件与文件应用到本机？会先写入带时间戳的备份。"
                 : root.confirmKind === "publish"
                   ? (root.syncState === "empty"
-                    ? "Seed this private GitHub repo with the checked items from this machine, then push? Keep the repo private so shortcuts, hooks, and scripts are not public."
-                    : "Copy the checked local shortcuts, plugins, and files into the repo, commit, and push?")
+                    ? "用本机勾选的项初始化这个私有 GitHub 仓库并推送？请保持仓库私有，避免快捷键、钩子与脚本公开。"
+                    : "将勾选的本机快捷键、插件与文件复制进仓库、提交并推送？")
                   : root.confirmKind === "switch-repo"
-                    ? "Point this machine at a different git repo? Local files are not deleted. The new repo is cloned and checked before anything is applied."
+                    ? "将本机指向另一个 git 仓库？本地文件不会被删除，应用任何内容之前会先克隆并检查新仓库。"
                     : root.confirmKind === "resync-repo"
-                      ? "Make this machine match the git repo? Incoming plugins, shortcuts, theme, and configs overwrite local copies. A timestamped backup is written first. Extra files that exist only on this machine are left in place."
+                      ? "让本机与 git 仓库一致？传入的插件、快捷键、主题与配置会覆盖本机副本。会先写入带时间戳的备份，仅存在于本机的额外文件保持不变。"
                       : root.confirmKind === "resync-local"
-                        ? "Overwrite the git repo with this machine's config, then push?"
-                        : "Unlink the config repo on this machine? Local files are left as they are."
+                        ? "用本机配置覆盖 git 仓库并推送？"
+                        : "取消本机与配置仓库的链接？本地文件保持原样。"
               color: root.foreground
               font.family: root.fontFamily
               font.pixelSize: Style.font.body
@@ -1263,9 +1263,9 @@ Panel {
               text: {
                 var names = root.selectedRemovals(root.confirmKind)
                 if (names.length === 0) return ""
-                var where = root.confirmKind === "apply" ? "deleted from this machine" : "deleted from the repo"
-                var head = names.length + (names.length === 1 ? " item" : " items") + " will be " + where + ":\n"
-                return head + names.slice(0, 8).join(", ") + (names.length > 8 ? ", and " + (names.length - 8) + " more" : "")
+                var where = root.confirmKind === "apply" ? "从本机删除" : "从仓库中删除"
+                var head = "以下 " + names.length + " 个条目将被" + where + "：\n"
+                return head + names.slice(0, 8).join("、") + (names.length > 8 ? " 等共 " + names.length + " 个" : "")
               }
               color: root.urgent
               font.family: root.fontFamily
@@ -1279,14 +1279,14 @@ Panel {
               width: parent.width
 
               Button {
-                text: root.confirmKind === "disconnect" ? "Unlink" : (root.confirmKind === "switch-repo" ? "Switch repo" : (root.confirmKind === "resync-repo" ? "Take repo" : (root.confirmKind === "resync-local" ? "Take this machine" : (root.confirmKind === "publish" ? (root.syncState === "empty" ? "Seed & push" : "Publish") : "Apply"))))
+                text: root.confirmKind === "disconnect" ? "取消链接" : (root.confirmKind === "switch-repo" ? "切换仓库" : (root.confirmKind === "resync-repo" ? "采用仓库" : (root.confirmKind === "resync-local" ? "采用本机" : (root.confirmKind === "publish" ? (root.syncState === "empty" ? "初始化并推送" : "发布") : "应用"))))
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 bordered: true
                 onClicked: root.confirmCurrent()
               }
               Button {
-                text: "Cancel"
+                text: "取消"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 onClicked: root.confirmKind = ""
@@ -1322,26 +1322,26 @@ Panel {
         QuickPill {
           width: parent.pillW
           icon: "󰌌"
-          label: "Shortcuts"
+          label: "快捷键"
           value: root.inspect && root.inspect.shortcuts ? String(root.inspect.shortcuts.length) : "—"
         }
         QuickPill {
           width: parent.pillW
           icon: "󰐱"
-          label: "Plugins"
+          label: "插件"
           value: root.inspect && root.inspect.plugins ? String(root.inspect.plugins.length) : "—"
         }
         QuickPill {
           width: parent.pillW
           icon: "󰅧"
-          label: "Incoming"
+          label: "传入"
           value: String(root.incomingCount)
           highlightColor: root.incomingCount > 0 ? root.accent : root.foreground
         }
         QuickPill {
           width: parent.pillW
           icon: "󰈸"
-          label: "Outgoing"
+          label: "传出"
           value: String(root.outgoingCount)
           highlightColor: root.outgoingCount > 0 ? root.accent : root.foreground
         }
@@ -1399,9 +1399,9 @@ Panel {
 
         Button {
           visible: root.syncState === "diverged" || root.syncState === "conflicts" || (root.incomingFiles.length + root.incomingBundles.length + root.incomingAddedShortcuts.length + root.incomingChangedShortcuts.length > 0 && root.localFiles.length + root.localBundles.length + root.localAddedShortcuts.length + root.localChangedShortcuts.length > 0)
-          text: "Resync from repo"
+          text: "从仓库重新同步"
           iconText: "󰁨"
-          tooltipText: "Make this machine match the git repo. A backup is written first."
+          tooltipText: "让本机与 git 仓库保持一致。会先写入备份。"
           foreground: root.foreground
           fontFamily: root.fontFamily
           bordered: true
@@ -1410,9 +1410,9 @@ Panel {
         }
         Button {
           visible: root.hasReviewable
-          text: "Review Changes"
+          text: "查看变更"
           iconText: "󰦓"
-          tooltipText: "Cherry-pick shortcuts, plugins, and files (c)"
+          tooltipText: "逐项挑选快捷键、插件与文件（c）"
           foreground: root.foreground
           fontFamily: root.fontFamily
           bordered: true
@@ -1420,9 +1420,9 @@ Panel {
         }
         Button {
           visible: root.syncState !== "empty"
-          text: "Apply"
+          text: "应用"
           iconText: "󰁨"
-          tooltipText: "Apply checked incoming items (a)"
+          tooltipText: "应用勾选的传入项（a）"
           foreground: root.foreground
           fontFamily: root.fontFamily
           bordered: true
@@ -1430,9 +1430,9 @@ Panel {
           onClicked: root.requestApply()
         }
         Button {
-          text: "Publish"
+          text: "发布"
           iconText: "󰓂"
-          tooltipText: "Publish checked local items (p)"
+          tooltipText: "发布勾选的本机项（p）"
           foreground: root.foreground
           fontFamily: root.fontFamily
           bordered: true
@@ -1441,9 +1441,9 @@ Panel {
         }
         Button {
           visible: root.status && Number(root.status.behind || 0) > 0
-          text: "Pull"
+          text: "拉取"
           iconText: "󰁅"
-          tooltipText: "Merge the commits origin has into the local clone"
+          tooltipText: "将 origin 上的提交合并到本地克隆"
           foreground: root.foreground
           fontFamily: root.fontFamily
           bordered: true
@@ -1465,7 +1465,7 @@ Panel {
             Text {
               id: remoteLabel
               textFormat: Text.PlainText
-              text: "Remote"
+              text: "远程"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -1489,8 +1489,8 @@ Panel {
             }
             Button {
               id: editRepoBtn
-              text: "Edit"
-              tooltipText: "Use a different git repo"
+              text: "编辑"
+              tooltipText: "使用其他 git 仓库"
               foreground: root.foreground
               fontFamily: root.fontFamily
               fontSize: Style.font.caption
@@ -1510,7 +1510,7 @@ Panel {
             Text {
               width: parent.width
               textFormat: Text.PlainText
-              text: "Git repo"
+              text: "Git 仓库"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -1529,7 +1529,7 @@ Panel {
             Text {
               width: parent.width
               textFormat: Text.PlainText
-              text: "HTTPS, SSH, owner/repo, or a local path. Empty private repos can be seeded from this machine."
+              text: "支持 HTTPS、SSH、owner/repo 或本地路径。空的私有仓库可从本机初始化。"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -1538,7 +1538,7 @@ Panel {
             Row {
               spacing: Style.space(8)
               Button {
-                text: root.busy ? "Switching…" : "Save"
+                text: root.busy ? "切换中…" : "保存"
                 bordered: true
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -1546,7 +1546,7 @@ Panel {
                 onClicked: root.saveEditRepo()
               }
               Button {
-                text: "Cancel"
+                text: "取消"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 enabled: !root.busy
@@ -1555,25 +1555,25 @@ Panel {
             }
           }
         }
-        TablePair { label: "Branch"; value: String((root.status.branch || "—") + (root.status.head ? " @ " + root.status.head : "")) }
-        TablePair { label: "Ahead / behind"; value: String(root.status.ahead || 0) + " / " + String(root.status.behind || 0) }
-        TablePair { label: "Last apply"; value: Model.relativeAgo(root.status.last_apply_at) }
-        TablePair { label: "Last publish"; value: Model.relativeAgo(root.status.last_publish_at) }
-        TablePair { label: "Plugin"; value: "config-sync " + String((root.status && root.status.plugin_version) || "") }
+        TablePair { label: "分支"; value: String((root.status.branch || "—") + (root.status.head ? " @ " + root.status.head : "")) }
+        TablePair { label: "领先 / 落后"; value: String(root.status.ahead || 0) + " / " + String(root.status.behind || 0) }
+        TablePair { label: "上次应用"; value: Model.relativeAgo(root.status.last_apply_at) }
+        TablePair { label: "上次发布"; value: Model.relativeAgo(root.status.last_publish_at) }
+        TablePair { label: "插件"; value: "config-sync " + String((root.status && root.status.plugin_version) || "") }
         TablePair {
-          label: "Theme"
+          label: "主题"
           value: {
             if (!root.inspect || !root.inspect.theme) return "—"
             var t = root.inspect.theme
             var name = t.display || t.slug || "—"
-            return t.custom ? (name + " (custom overlay)") : name
+            return t.custom ? (name + "（自定义覆盖层）") : name
           }
         }
-        TablePair { label: "Bar position"; value: root.inspect && root.inspect.bar ? String(root.inspect.bar.position || "—") : "—" }
+        TablePair { label: "栏位置"; value: root.inspect && root.inspect.bar ? String(root.inspect.bar.position || "—") : "—" }
         TablePair {
-          label: "Idle lock"
+          label: "闲置锁定"
           value: root.inspect && root.inspect.idle && root.inspect.idle.lock
-            ? (Number(root.inspect.idle.lock) / 60) + " min"
+            ? (Number(root.inspect.idle.lock) / 60) + " 分钟"
             : "—"
         }
       }
@@ -1582,7 +1582,7 @@ Panel {
         visible: !!(root.status && root.status.fetch_error)
         width: parent.width
         textFormat: Text.PlainText
-        text: "Fetch: " + root.status.fetch_error
+        text: "拉取：" + root.status.fetch_error
         color: root.urgent
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
@@ -1599,7 +1599,7 @@ Panel {
         Text {
           width: parent.width
           textFormat: Text.PlainText
-          text: "Incoming is from git (Apply). Outgoing is this machine (Publish). Press a group to expand and tick each item."
+          text: "传入来自 git（应用），传出发自本机（发布）。点击分组展开并逐项勾选。"
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.bodySmall
@@ -1607,20 +1607,20 @@ Panel {
         }
 
         ChangeSection {
-          title: "Incoming"
-          subtitle: "From the repo — Apply"
+          title: "传入"
+          subtitle: "来自仓库 — 应用"
           mixed: true
           files: root.incomingItems
         }
         ChangeSection {
-          title: "Outgoing"
-          subtitle: "This machine — Publish"
+          title: "传出"
+          subtitle: "本机 — 发布"
           mixed: true
           files: root.outgoingItems
         }
         ChangeSection {
-          title: "Both sides"
-          subtitle: "Pick Keep local or Take repo on each row"
+          title: "两侧"
+          subtitle: "在每行选择「保留本机」或「采用仓库」"
           mixed: true
           files: root.bothItems
           bulkPickable: false
@@ -1639,8 +1639,8 @@ Panel {
         width: parent.width
         textFormat: Text.PlainText
         text: root.showingHidden
-          ? "Hidden changes are ignored during sync. Press Unhide on any item to restore it."
-          : "Incoming is from git (Apply). Outgoing is this machine (Publish). Groups start collapsed — press one to tick each item. On = sync that row, Off = leave it alone."
+          ? "已隐藏的变更在同步时会被忽略。对任意条目点击「取消隐藏」即可恢复。"
+          : "传入来自 git（应用），传出发自本机（发布）。分组默认折叠——点击展开后逐项勾选。开 = 同步该行，关 = 跳过。"
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -1651,7 +1651,7 @@ Panel {
         visible: !root.showingHidden && root.unresolvedBoth > 0
         width: parent.width
         textFormat: Text.PlainText
-        text: "Checked items that changed on both sides still need Keep local or Take repo."
+        text: "两侧都有改动的勾选项，仍需选择「保留本机」或「采用仓库」。"
         color: root.urgent
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -1661,35 +1661,35 @@ Panel {
       Row {
         spacing: Style.space(6)
         Button {
-          text: "Select incoming"
+          text: "选择传入"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily
           onClicked: root.bulkPick("in")
         }
         Button {
-          text: "Select local"
+          text: "选择本机"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily
           onClicked: root.bulkPick("out")
         }
         Button {
-          text: "Select all"
+          text: "全选"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily
           onClicked: root.bulkPick("all")
         }
         Button {
-          text: "Clear"
+          text: "清除"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily
           onClicked: root.bulkPick("none")
         }
         Button {
-          text: root.showingHidden ? "Active changes" : ("Hidden (" + root.hiddenCount + ")")
+          text: root.showingHidden ? "进行中的变更" : ("已隐藏（" + root.hiddenCount + ")")
           iconText: root.showingHidden ? "󰦓" : "󰈉"
           fontSize: Style.font.caption
           foreground: root.foreground
@@ -1716,7 +1716,7 @@ Panel {
         spacing: Style.space(8)
         Button {
           visible: root.syncState !== "empty"
-          text: "Apply selected"
+          text: "应用所选"
           iconText: "󰁨"
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -1725,7 +1725,7 @@ Panel {
           onClicked: root.requestApply()
         }
         Button {
-          text: root.syncState === "empty" ? ("Seed repo (" + root.outgoingPicked + " items)") : "Publish selected"
+          text: "发布所选"
           iconText: "󰓂"
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -1738,8 +1738,8 @@ Panel {
       Toggle {
         visible: !root.showingHidden
         width: parent.width
-        label: "Include machine-local files"
-        description: "Display layout (hypr/monitors.lua) and extra paths listed in .omarchy-config.json machine_local stay on this machine unless enabled here."
+        label: "包含本机专属文件"
+        description: "显示器布局（hypr/monitors.lua）与 .omarchy-config.json 中 machine_local 列出的额外路径会保留在本机，除非在此启用。"
         checked: root.includeMachine
         foreground: root.foreground
         accent: root.accent
@@ -1756,27 +1756,27 @@ Panel {
         visible: !root.showingHidden && root.conflictFiles.length > 0
         width: parent.width
         spacing: Style.space(6)
-        PanelSectionHeader { text: "GIT CONFLICTS"; foreground: root.foreground; fontFamily: root.fontFamily }
+        PanelSectionHeader { text: "GIT 冲突"; foreground: root.foreground; fontFamily: root.fontFamily }
         Repeater {
           model: root.conflictFiles
           FileRow {
             required property var modelData
             width: parent.width
             pathLabel: String(modelData)
-            summary: "Unmerged path"
-            statusLabel: "Conflict"
+            summary: "未合并路径"
+            statusLabel: "冲突"
             extra: conflictButtons
             property Component conflictButtons: Row {
               spacing: Style.space(4)
               Button {
-                text: "Keep local"
+                text: "保留本机"
                 fontSize: Style.font.caption
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 onClicked: root.resolveConflict(String(modelData), "ours")
               }
               Button {
-                text: "Take incoming"
+                text: "采用传入"
                 fontSize: Style.font.caption
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -1789,22 +1789,22 @@ Panel {
 
       ChangeSection {
         visible: !root.showingHidden && root.incomingItems.length > 0
-        title: "Incoming"
-        subtitle: "From the repo — Apply"
+        title: "传入"
+        subtitle: "来自仓库 — 应用"
         mixed: true
         files: root.incomingItems
       }
       ChangeSection {
         visible: !root.showingHidden && root.outgoingItems.length > 0
-        title: "Outgoing"
-        subtitle: "This machine — Publish"
+        title: "传出"
+        subtitle: "本机 — 发布"
         mixed: true
         files: root.outgoingItems
       }
       ChangeSection {
         visible: !root.showingHidden && root.bothItems.length > 0
-        title: "Both sides"
-        subtitle: "Pick Keep local or Take repo on each row"
+        title: "两侧"
+        subtitle: "在每行选择「保留本机」或「采用仓库」"
         mixed: true
         files: root.bothItems
         bulkPickable: false
@@ -1818,8 +1818,8 @@ Panel {
           width: parent.width
           textFormat: Text.PlainText
           text: root.hiddenCount > 0
-            ? ("No active config differences (" + root.hiddenCount + " ignored).")
-            : "No portable config differences. This machine matches the repo."
+            ? ("没有生效中的配置差异（" + root.hiddenCount + " 项已忽略）。")
+            : "没有可移植的配置差异，本机与仓库一致。"
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.body
@@ -1827,7 +1827,7 @@ Panel {
         }
         Button {
           visible: root.hiddenCount > 0
-          text: "Check ignored syncs (" + root.hiddenCount + ")"
+          text: "查看已忽略的同步（" + root.hiddenCount + ")"
           iconText: "󰈉"
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -1857,7 +1857,7 @@ Panel {
               spacing: 2
               Text {
                 textFormat: Text.PlainText
-                text: "HIDDEN SYNCS (" + root.hiddenCount + ")"
+                text: "已隐藏的同步（" + root.hiddenCount + ")"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -1866,7 +1866,7 @@ Panel {
               Text {
                 width: parent.width
                 textFormat: Text.PlainText
-                text: "These changes are ignored and will not sync."
+                text: "这些变更已被忽略，不会同步。"
                 color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -1877,7 +1877,7 @@ Panel {
 
           Button {
             id: unhideAllBtn
-            text: "Unhide all"
+            text: "全部取消隐藏"
             iconText: "󰈈"
             fontSize: Style.font.caption
             foreground: root.foreground
@@ -1893,7 +1893,7 @@ Panel {
           visible: root.hiddenCount === 0
           width: parent.width
           textFormat: Text.PlainText
-          text: "No hidden changes. Click 'Hide' on any incoming or outgoing change to ignore it."
+          text: "没有已隐藏的变更。对任意传入或传出变更点击「隐藏」即可忽略。"
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.bodySmall
@@ -1953,7 +1953,7 @@ Panel {
 
               Button {
                 id: unhideRowBtn
-                text: "Unhide"
+                text: "取消隐藏"
                 iconText: "󰈈"
                 bordered: true
                 foreground: root.foreground
@@ -1975,11 +1975,11 @@ Panel {
     Column {
       width: parent.width
       spacing: Style.space(6)
-      PanelSectionHeader { text: "KEYBOARD BINDINGS (" + (root.inspect && root.inspect.shortcuts ? root.inspect.shortcuts.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+      PanelSectionHeader { text: "键盘绑定（" + (root.inspect && root.inspect.shortcuts ? root.inspect.shortcuts.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
       Text {
         textFormat: Text.PlainText
         visible: !root.inspect || !root.inspect.shortcuts || root.inspect.shortcuts.length === 0
-        text: "No o.bind() shortcuts found in hypr/bindings.lua."
+        text: "hypr/bindings.lua 中未找到 o.bind() 快捷键。"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2071,11 +2071,11 @@ Panel {
     Column {
       width: parent.width
       spacing: Style.space(6)
-      PanelSectionHeader { text: "INSTALLED PLUGINS (" + (root.inspect && root.inspect.plugins ? root.inspect.plugins.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+      PanelSectionHeader { text: "已安装插件（" + (root.inspect && root.inspect.plugins ? root.inspect.plugins.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
       Text {
         textFormat: Text.PlainText
         visible: !root.inspect || !root.inspect.plugins || root.inspect.plugins.length === 0
-        text: "No extra plugins in plugins/."
+        text: "plugins/ 中没有额外插件。"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2198,7 +2198,7 @@ Panel {
 
       PanelSectionHeader {
         visible: root.inspect && root.inspect.bar
-        text: "BAR LAYOUT"
+        text: "栏布局"
         foreground: root.foreground
         fontFamily: root.fontFamily
       }
@@ -2236,11 +2236,11 @@ Panel {
     Column {
       width: parent.width
       spacing: Style.space(6)
-      PanelSectionHeader { text: "HOOKS (" + (root.inspect && root.inspect.hooks ? root.inspect.hooks.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+      PanelSectionHeader { text: "钩子（" + (root.inspect && root.inspect.hooks ? root.inspect.hooks.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
       Text {
         textFormat: Text.PlainText
         visible: !root.inspect || !root.inspect.hooks || root.inspect.hooks.length === 0
-        text: "No event hooks in omarchy/hooks/."
+        text: "omarchy/hooks/ 中没有事件钩子。"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2252,8 +2252,8 @@ Panel {
           width: parent.width
           pathLabel: modelData.event + "/" + modelData.name
           localPath: "~/.config/omarchy/hooks/" + modelData.event + ".d/" + modelData.name
-          summary: modelData.sample ? "Sample hook script" : "Active hook script"
-          statusLabel: modelData.sample ? "Sample" : "Hook"
+          summary: modelData.sample ? "示例钩子脚本" : "当前启用的钩子脚本"
+          statusLabel: modelData.sample ? "示例" : "钩子"
         }
       }
     }
@@ -2264,11 +2264,11 @@ Panel {
     Column {
       width: parent.width
       spacing: Style.space(6)
-      PanelSectionHeader { text: "HELPER SCRIPTS (" + (root.inspect && root.inspect.bins ? root.inspect.bins.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+      PanelSectionHeader { text: "辅助脚本（" + (root.inspect && root.inspect.bins ? root.inspect.bins.length : 0) + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
       Text {
         textFormat: Text.PlainText
         visible: !root.inspect || !root.inspect.bins || root.inspect.bins.length === 0
-        text: "No scripts in bin/."
+        text: "bin/ 中没有脚本。"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2280,8 +2280,8 @@ Panel {
           width: parent.width
           pathLabel: "bin/" + String(modelData)
           localPath: "~/.local/bin/" + String(modelData)
-          summary: "Custom script in ~/.local/bin/"
-          statusLabel: "Script"
+          summary: "~/.local/bin/ 中的自定义脚本"
+          statusLabel: "脚本"
         }
       }
     }
@@ -2296,7 +2296,7 @@ Panel {
       Text {
         width: parent.width
         textFormat: Text.PlainText
-        text: "All configuration areas tracked by the repo and this machine, grouped by category. Press any category to review changes and inspect settings."
+        text: "仓库与本机跟踪的全部配置区域，按类别分组。点击任意类别可查看变更并检查设置。"
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2306,8 +2306,8 @@ Panel {
       CategorySection {
         categoryId: "shortcuts"
         iconText: "󰌌"
-        title: "Shortcuts"
-        subtitle: "Keyboard shortcuts (hypr/bindings.lua)"
+        title: "快捷键"
+        subtitle: "键盘快捷键（hypr/bindings.lua）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "shortcuts")
         files: Model.filesForCategory(root.diffFiles, "shortcuts")
         inspectItems: root.inspect ? root.inspect.shortcuts : []
@@ -2317,8 +2317,8 @@ Panel {
       CategorySection {
         categoryId: "theme"
         iconText: "󰏘"
-        title: "Theme"
-        subtitle: "Selected theme & custom theme styles (omarchy/theme.name)"
+        title: "主题"
+        subtitle: "当前主题与自定义主题样式（omarchy/theme.name）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "theme")
         files: Model.filesForCategory(root.diffFiles, "theme")
       }
@@ -2326,8 +2326,8 @@ Panel {
       CategorySection {
         categoryId: "plugins"
         iconText: "󰐱"
-        title: "Plugins & Bar"
-        subtitle: "Shell plugins, widgets & bar layout (plugins/)"
+        title: "插件与栏"
+        subtitle: "Shell 插件、小组件与栏布局（plugins/）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "plugins")
         files: Model.filesForCategory(root.diffFiles, "plugins")
         inspectItems: root.inspect ? root.inspect.plugins : []
@@ -2337,8 +2337,8 @@ Panel {
       CategorySection {
         categoryId: "displays"
         iconText: "󰍹"
-        title: "Displays & Monitors"
-        subtitle: "Display layout & monitor rules (hypr/monitors.lua)"
+        title: "显示器"
+        subtitle: "显示器布局与规则（hypr/monitors.lua）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "displays")
         files: Model.filesForCategory(root.diffFiles, "displays")
       }
@@ -2346,8 +2346,8 @@ Panel {
       CategorySection {
         categoryId: "hyprland"
         iconText: "󰒓"
-        title: "Hyprland Configs"
-        subtitle: "Gaps, animations, window rules, input, autostart (hypr/)"
+        title: "Hyprland 配置"
+        subtitle: "间距、动画、窗口规则、输入、自启动（hypr/）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "hyprland")
         files: Model.filesForCategory(root.diffFiles, "hyprland")
       }
@@ -2355,8 +2355,8 @@ Panel {
       CategorySection {
         categoryId: "shell"
         iconText: "󰘿"
-        title: "Shell & Bar"
-        subtitle: "Bar layout, widgets, and idle settings (omarchy/shell.json)"
+        title: "Shell 与栏"
+        subtitle: "栏布局、小组件与闲置设置（omarchy/shell.json）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "shell")
         files: Model.filesForCategory(root.diffFiles, "shell")
       }
@@ -2364,8 +2364,8 @@ Panel {
       CategorySection {
         categoryId: "terminals"
         iconText: "󰞷"
-        title: "Terminals"
-        subtitle: "Alacritty, Foot, Ghostty, and Kitty configs (terminals/)"
+        title: "终端"
+        subtitle: "Alacritty、Foot、Ghostty 与 Kitty 配置（terminals/）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "terminals")
         files: Model.filesForCategory(root.diffFiles, "terminals")
       }
@@ -2373,8 +2373,8 @@ Panel {
       CategorySection {
         categoryId: "hooks"
         iconText: "󰓢"
-        title: "Hooks"
-        subtitle: "Event automation scripts (omarchy/hooks/)"
+        title: "钩子"
+        subtitle: "事件自动化脚本（omarchy/hooks/）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "hooks")
         files: Model.filesForCategory(root.diffFiles, "hooks")
         inspectItems: root.inspect ? root.inspect.hooks : []
@@ -2384,8 +2384,8 @@ Panel {
       CategorySection {
         categoryId: "scripts"
         iconText: "󰲋"
-        title: "Helper Scripts"
-        subtitle: "Custom scripts in ~/.local/bin/ (bin/)"
+        title: "辅助脚本"
+        subtitle: "~/.local/bin/ 中的自定义脚本（bin/）"
         changeItems: Model.itemsForCategory(root.allReviewItems, "scripts")
         files: Model.filesForCategory(root.diffFiles, "scripts")
         inspectItems: root.inspect ? root.inspect.bins : []
@@ -2395,8 +2395,8 @@ Panel {
       CategorySection {
         categoryId: "other"
         iconText: "󰉋"
-        title: "Other Configs"
-        subtitle: "Additional tracked configuration files"
+        title: "其他配置"
+        subtitle: "其他受跟踪的配置文件"
         changeItems: Model.itemsForCategory(root.allReviewItems, "other")
         files: Model.filesForCategory(root.diffFiles, "other")
       }
@@ -2531,8 +2531,8 @@ Panel {
               if (catRoot.changeItems.length > 0)
                 bits.push(catRoot.changeItems.length + (catRoot.changeItems.length === 1 ? " change" : " changes"))
               else
-                bits.push("In sync")
-              bits.push(catRoot.expanded ? "press to hide" : "press to expand")
+                bits.push("已同步")
+              bits.push(catRoot.expanded ? "点击收起" : "点击展开")
               return bits.join(" · ")
             }
             color: root.dim
@@ -2558,7 +2558,7 @@ Panel {
           }
           Text {
             textFormat: Text.PlainText
-            text: catRoot.changeItems.length > 0 ? (catRoot.changeItems.length === 1 ? "change" : "changes") : (catRoot.totalCount === 1 ? "item" : "items")
+            text: catRoot.changeItems.length > 0 ? (catRoot.changeItems.length === 1 ? "处变更" : "处变更") : (catRoot.totalCount === 1 ? "个条目" : "个条目")
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -2587,7 +2587,7 @@ Panel {
         visible: catRoot.changeItems.length > 0
         width: parent.width
         spacing: Style.space(6)
-        PanelSectionHeader { text: "PENDING CHANGES (" + catRoot.changeItems.length + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+        PanelSectionHeader { text: "待处理变更（" + catRoot.changeItems.length + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
         Repeater {
           model: catRoot.changeItems
           Rectangle {
@@ -2670,9 +2670,9 @@ Panel {
                   text: {
                     var st = Model.fileStatusLabel(catRowBox.modelData.status, catRowBox.modelData.removal)
                     var sum = catRowBox.rowSummary
-                    var verb = catRowBox.modelData.removal ? " · will delete" : " · will sync"
+                    var verb = catRowBox.modelData.removal ? " · 将删除" : " · 将同步"
                     if (!catRowBox.pickable) return Model.statusPrefix(st, sum) + sum
-                    return Model.statusPrefix(st, sum) + sum + (catRowBox.included ? verb : " · skipped")
+                    return Model.statusPrefix(st, sum) + sum + (catRowBox.included ? verb : " · 已跳过")
                   }
                   color: root.dim
                   font.family: root.fontFamily
@@ -2715,7 +2715,7 @@ Panel {
                 spacing: Style.space(4)
                 anchors.verticalCenter: parent.verticalCenter
                 Button {
-                  text: "Keep local"
+                  text: "保留本机"
                   fontSize: Style.font.caption
                   foreground: root.foreground
                   fontFamily: root.fontFamily
@@ -2724,7 +2724,7 @@ Panel {
                   onClicked: root.selectSide(catRowBox.rowKind, catRowBox.rowId, "local")
                 }
                 Button {
-                  text: "Take repo"
+                  text: "采用仓库"
                   fontSize: Style.font.caption
                   foreground: root.foreground
                   fontFamily: root.fontFamily
@@ -2752,7 +2752,7 @@ Panel {
               Button {
                 id: catIncludeBtn
                 visible: catRowBox.pickable
-                text: catRowBox.included ? "Included" : "Skip"
+                text: catRowBox.included ? "已包含" : "跳过"
                 selected: catRowBox.included
                 bordered: true
                 foreground: root.foreground
@@ -2764,9 +2764,9 @@ Panel {
 
               Button {
                 id: catHideBtn
-                text: "Hide"
+                text: "隐藏"
                 iconText: "󰈉"
-                tooltipText: "Hide this change so it doesn't bother you"
+                tooltipText: "隐藏此变更，不再提示"
                 bordered: true
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -2799,7 +2799,7 @@ Panel {
         visible: catRoot.extraContent === null && catRoot.files.length > 0
         width: parent.width
         spacing: Style.space(6)
-        PanelSectionHeader { text: "TRACKED FILES (" + catRoot.files.length + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
+        PanelSectionHeader { text: "受跟踪文件（" + catRoot.files.length + ")"; foreground: root.foreground; fontFamily: root.fontFamily }
         Repeater {
           model: catRoot.files
           FileRow {
@@ -2809,7 +2809,7 @@ Panel {
             localPath: modelData.local_path || ""
             repoPath: modelData.repo_path || ""
             summary: modelData.summary
-            statusLabel: Model.fileStatusLabel(modelData.status, modelData.removal) + (modelData.portable ? "" : " · Machine-specific")
+            statusLabel: Model.fileStatusLabel(modelData.status, modelData.removal) + (modelData.portable ? "" : " · 设备专属")
           }
         }
       }
@@ -2888,8 +2888,8 @@ Panel {
               var bits = []
               if (sectionRoot.subtitle) bits.push(sectionRoot.subtitle)
               if (sectionRoot.mixed)
-                bits.push(sectionRoot.includedCount + " included")
-              bits.push(sectionRoot.expanded ? "press to hide" : "press to expand")
+                bits.push(sectionRoot.includedCount + " 项已包含")
+              bits.push(sectionRoot.expanded ? "点击收起" : "点击展开")
               return bits.join(" · ")
             }
             color: root.dim
@@ -2915,7 +2915,7 @@ Panel {
           }
           Text {
             textFormat: Text.PlainText
-            text: (sectionRoot.files && sectionRoot.files.length === 1) ? "item" : "items"
+            text: (sectionRoot.files && sectionRoot.files.length === 1) ? "个条目" : "个条目"
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -2976,7 +2976,7 @@ Panel {
           if (sectionRoot.mixed) return String(modelData.summary || "")
           var sum = String(modelData[sectionRoot.summaryField] || "")
           if (sectionRoot.kind === "p")
-            sum = sum + " · " + String(modelData.changed_count || 0) + " files"
+            sum = sum + " · " + String(modelData.changed_count || 0) + " 个文件"
           return sum
         }
         readonly property bool rowBoth: sectionRoot.mixed ? !!modelData.both : sectionRoot.both
@@ -3050,9 +3050,9 @@ Panel {
               text: {
                 var st = Model.fileStatusLabel(rowBox.modelData.status, rowBox.modelData.removal)
                 var sum = rowBox.rowSummary
-                var verb = rowBox.modelData.removal ? " · will delete" : " · will sync"
+                var verb = rowBox.modelData.removal ? " · 将删除" : " · 将同步"
                 if (!rowBox.pickable) return Model.statusPrefix(st, sum) + sum
-                return Model.statusPrefix(st, sum) + sum + (rowBox.included ? verb : " · skipped")
+                return Model.statusPrefix(st, sum) + sum + (rowBox.included ? verb : " · 已跳过")
               }
               color: root.dim
               font.family: root.fontFamily
@@ -3095,7 +3095,7 @@ Panel {
             spacing: Style.space(4)
             anchors.verticalCenter: parent.verticalCenter
             Button {
-              text: "Keep local"
+              text: "保留本机"
               fontSize: Style.font.caption
               foreground: root.foreground
               fontFamily: root.fontFamily
@@ -3104,7 +3104,7 @@ Panel {
               onClicked: root.selectSide(rowBox.rowKind, rowBox.rowId, "local")
             }
             Button {
-              text: "Take repo"
+              text: "采用仓库"
               fontSize: Style.font.caption
               foreground: root.foreground
               fontFamily: root.fontFamily
@@ -3132,7 +3132,7 @@ Panel {
           Button {
             id: includeBtn
             visible: rowBox.pickable
-            text: rowBox.included ? "Included" : "Skip"
+            text: rowBox.included ? "已包含" : "跳过"
             selected: rowBox.included
             bordered: true
             foreground: root.foreground
@@ -3144,9 +3144,9 @@ Panel {
 
           Button {
             id: hideBtn
-            text: "Hide"
+            text: "隐藏"
             iconText: "󰈉"
-            tooltipText: "Hide this change so it doesn't bother you"
+            tooltipText: "隐藏此变更，不再提示"
             bordered: true
             foreground: root.foreground
             fontFamily: root.fontFamily
@@ -3179,10 +3179,10 @@ Panel {
     readonly property bool checked: root.isPicked(kind, itemId)
     readonly property string bothKey: kind === "f" ? itemId : (kind + ":" + itemId)
     readonly property string direction: {
-      var s = String(statusLabel || "").toLowerCase()
-      if (s.indexOf("incoming") !== -1 || s === "new in repo") return "in"
-      if (s.indexOf("local") !== -1 || s.indexOf("this machine") !== -1) return "out"
-      if (s.indexOf("both") !== -1) return "both"
+      var s = String(statusLabel || "")
+      if (s.indexOf("仓库") !== -1) return "in"
+      if (s.indexOf("本机") !== -1 || s.indexOf("仅本机") !== -1) return "out"
+      if (s.indexOf("两侧") !== -1) return "both"
       return ""
     }
 
@@ -3258,7 +3258,7 @@ Panel {
               var bits = []
               if (pickRoot.statusLabel) bits.push(pickRoot.statusLabel)
               if (pickRoot.summary) bits.push(pickRoot.summary)
-              bits.push(pickRoot.checked ? "will sync" : "skipped")
+              bits.push(pickRoot.checked ? "将同步" : "已跳过")
               return bits.join(" · ")
             }
             color: root.dim
@@ -3274,7 +3274,7 @@ Panel {
           anchors.verticalCenter: parent.verticalCenter
           Text {
             textFormat: Text.PlainText
-            text: pickRoot.checked ? "Include" : "Skip"
+            text: pickRoot.checked ? "包含" : "跳过"
             color: pickRoot.checked ? root.accent : root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -3294,7 +3294,7 @@ Panel {
         visible: pickRoot.both
         spacing: Style.space(6)
         Button {
-          text: "Keep local"
+          text: "保留本机"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily
@@ -3303,7 +3303,7 @@ Panel {
           onClicked: root.selectSide(pickRoot.kind, pickRoot.itemId, "local")
         }
         Button {
-          text: "Take repo"
+          text: "采用仓库"
           fontSize: Style.font.caption
           foreground: root.foreground
           fontFamily: root.fontFamily

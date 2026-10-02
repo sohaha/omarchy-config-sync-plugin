@@ -86,18 +86,18 @@ PROTECTED_PLUGINS = {PLUGIN_ID}  # this plugin is excluded from sync so it does 
 PLUGIN_VERSION = "1.4.1"
 
 FILE_SUMMARIES = {
-    "hypr/autostart.lua": "Autostart programs",
-    "hypr/bindings.lua": "Keyboard shortcuts",
-    "hypr/hyprexpo.lua": "Workspace overview",
-    "hypr/hyprland.lua": "Workspaces and window rules",
-    "hypr/hyprsunset.conf": "Night light",
-    "hypr/input.lua": "Keyboard, mouse, and touchpad",
+    "hypr/autostart.lua": "自启动程序",
+    "hypr/bindings.lua": "键盘快捷键",
+    "hypr/hyprexpo.lua": "工作区概览",
+    "hypr/hyprland.lua": "工作区与窗口规则",
+    "hypr/hyprsunset.conf": "夜光",
+    "hypr/input.lua": "键盘、鼠标与触控板",
     "hypr/looknfeel.lua": "Gaps, borders, animations, opacity",
-    "hypr/monitors.lua": "Display layout (machine-specific)",
-    "hypr/xdph.conf": "Screen share / XDG portal",
-    "omarchy/shell.json": "Bar layout, widgets, and idle lock",
-    "omarchy/shell.toml": "Shell font and type scale",
-    "omarchy/theme.name": "Selected Omarchy theme",
+    "hypr/monitors.lua": "显示器布局（本机专属）",
+    "hypr/xdph.conf": "屏幕共享 / XDG portal",
+    "omarchy/shell.json": "栏布局、小组件与闲置锁定",
+    "omarchy/shell.toml": "Shell 字体与字号缩放",
+    "omarchy/theme.name": "当前 Omarchy 主题",
 }
 
 # Always machine-local unless the user opts in with Include machine-local files.
@@ -234,18 +234,18 @@ def _open_bound(path: Path | str, max_bytes: int | None = None, within: Path | N
     try:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
-            raise OSError(errno.EINVAL, "not a regular file")
+            raise OSError(errno.EINVAL, "不是常规文件")
         if max_bytes is not None and st.st_size > max_bytes:
-            raise OSError(errno.EFBIG, "exceeds size cap")
+            raise OSError(errno.EFBIG, "超出大小上限")
         if within is not None:
             proc_link = f"/proc/self/fd/{fd}"
             if not os.path.lexists(proc_link):
                 # Containment was requested; without /proc we cannot prove it,
                 # so refuse rather than silently skipping the check.
-                raise OSError(errno.ENOSYS, "cannot verify containment without /proc")
+                raise OSError(errno.ENOSYS, "没有 /proc 无法验证包含关系")
             actual = Path(os.path.realpath(proc_link))
             if not actual.is_relative_to(within.resolve()):
-                raise OSError(errno.EXDEV, "resolves outside the allowed root")
+                raise OSError(errno.EXDEV, "解析结果超出允许的根目录")
         return fd
     except OSError:
         os.close(fd)
@@ -281,7 +281,7 @@ def _write_all(fd: int, data: bytes | memoryview) -> int:
     while total < len(view):
         n = os.write(fd, view[total:])
         if n <= 0:
-            raise OSError(errno.EIO, "short write: no progress")
+            raise OSError(errno.EIO, "短写入：无进度")
         total += n
     return total
 
@@ -298,8 +298,8 @@ class ByteBudget:
         self.used += n
         if self.used > self.limit:
             raise SyncError(
-                f"{self.what} exceeded the {format_byte_limit(self.limit)} per-operation size limit; "
-                "select fewer files at a time."
+                f"{self.what} 超过单次操作上限 {format_byte_limit(self.limit)}；"
+                "请减少一次选择的文件。"
             )
 
 
@@ -356,21 +356,21 @@ def _open_dir_bound(root: Path, rel_parent: Path, create: bool = True) -> int:
     on the opened descriptor via /proc/self/fd at every hop — symlinks that
     stay inside root (dotfiles setups) pass, escapes are refused."""
     if any(part in ("..", "") for part in rel_parent.parts):
-        raise SyncError(f"Refusing to write through unsafe path: {rel_parent}")
+        raise SyncError(f"拒绝写入不安全路径：{rel_parent}")
     root_resolved = root.resolve()
     flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_CLOEXEC", 0)
     try:
         fd = os.open(str(root), flags)
     except OSError as exc:
-        raise SyncError(f"Cannot open destination directory: {root}") from exc
+        raise SyncError(f"无法打开目标目录：{root}") from exc
 
     def verify(fd_: int) -> None:
         proc_link = f"/proc/self/fd/{fd_}"
         if not os.path.lexists(proc_link):
-            raise SyncError("Cannot verify write containment without /proc; refusing to write.")
+            raise SyncError("没有 /proc 无法验证写入包含关系，拒绝写入。")
         actual = Path(os.path.realpath(proc_link))
         if not actual.is_relative_to(root_resolved):
-            raise SyncError(f"Refusing to write into {root / rel_parent}: it resolves outside {root}")
+            raise SyncError(f"拒绝写入 {root / rel_parent}：解析结果超出 {root}")
 
     try:
         verify(fd)
@@ -379,17 +379,17 @@ def _open_dir_bound(root: Path, rel_parent: Path, create: bool = True) -> int:
                 nxt = os.open(part, flags, dir_fd=fd)
             except OSError as exc:
                 if exc.errno != errno.ENOENT or not create:
-                    raise SyncError(f"Cannot open destination directory: {root / rel_parent}") from exc
+                    raise SyncError(f"无法打开目标目录：{root / rel_parent}") from exc
                 try:
                     os.mkdir(part, 0o755, dir_fd=fd)
                 except FileExistsError:
                     pass
                 except OSError as mk_exc:
-                    raise SyncError(f"Cannot create destination directory: {root / rel_parent}") from mk_exc
+                    raise SyncError(f"无法创建目标目录：{root / rel_parent}") from mk_exc
                 try:
                     nxt = os.open(part, flags, dir_fd=fd)
                 except OSError as exc2:
-                    raise SyncError(f"Cannot open destination directory: {root / rel_parent}") from exc2
+                    raise SyncError(f"无法打开目标目录：{root / rel_parent}") from exc2
             os.close(fd)
             fd = nxt
             verify(fd)
@@ -442,7 +442,7 @@ def _write_within(root: Path, dst: Path, mode: int, write_body) -> None:
     try:
         rel = dst.relative_to(root)
     except ValueError as exc:
-        raise SyncError(f"Refusing to write {dst}: outside {root}") from exc
+        raise SyncError(f"拒绝写入 {dst}：超出 {root} 范围") from exc
     dir_fd = _open_dir_bound(root, rel.parent)
     try:
         _replace_at(dir_fd, rel.name, mode, write_body)
@@ -706,7 +706,7 @@ def read_source_argument(args: argparse.Namespace) -> str:
 def normalize_source(raw: str) -> tuple[str, str]:
     src = (raw or "").strip()
     if not src or src.startswith("-") or "\0" in src or "\n" in src:
-        raise SyncError("Paste a git URL or a local path to your Omarchy config repo.")
+        raise SyncError("请粘贴 git URL 或你的 Omarchy 配置仓库的本地路径。")
     if src.startswith("git@") or src.startswith("ssh://") or src.startswith("file://"):
         return "url", src
     if src.startswith("http://") or src.startswith("https://"):
@@ -719,8 +719,8 @@ def normalize_source(raw: str) -> tuple[str, str]:
     if path.exists() and not str(path).startswith("-"):
         return "path", str(path)
     raise SyncError(
-        f"Not a local path, and not a git URL: {sanitize_url(src)}. "
-        "Use https://github.com/you/omarchy-config.git or ~/Github/omarchy-config."
+        f"既不是本地路径也不是 git URL：{sanitize_url(src)}。"
+        "例如 https://github.com/you/omarchy-config.git 或 ~/Github/omarchy-config。"
     )
 
 
@@ -729,6 +729,11 @@ def git_env() -> dict[str, str]:
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GIT_ASKPASS"] = env.get("GIT_ASKPASS") or "true"
     env.setdefault("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
+    # Abort stalled HTTP transfers fast: a fetch that drops below 1KB/s for 20s
+    # (flaky GitHub connectivity) fails quickly instead of pinning the panel on
+    # "处理中…" until the hard FETCH/CLONE timeouts fire.
+    env.setdefault("GIT_HTTP_LOW_SPEED_LIMIT", "1000")
+    env.setdefault("GIT_HTTP_LOW_SPEED_TIME", "20")
     return env
 
 
@@ -868,9 +873,9 @@ def run_bounded(
     out = b"".join(out_chunks).decode("utf-8", errors="replace")
     err = b"".join(err_chunks).decode("utf-8", errors="replace")
     if truncated:
-        err = (err + "\n[output truncated: process exceeded its output limit and was stopped]").strip()
+        err = (err + "\n[输出已截断：进程超出输出限制并停止]").strip()
     if disk_exceeded:
-        err = (err + f"\n[repository exceeded its {format_byte_limit(max_disk_bytes or 0)} on-disk budget and was stopped]").strip()
+        err = (err + f"\n[仓库超出磁盘限额 {format_byte_limit(max_disk_bytes or 0)}，已停止]").strip()
         if returncode == 0:
             returncode = 1
     return subprocess.CompletedProcess(cmd, returncode, out, err)
@@ -907,7 +912,7 @@ def run_git(
             max_disk_bytes=MAX_REPO_DISK_BYTES if disk_root is not None else None,
         )
     except subprocess.TimeoutExpired as exc:
-        raise SyncError(f"git {' '.join(args)} timed out after {timeout}s") from exc
+        raise SyncError(f"git {' '.join(args)} 超时（{timeout} 秒）") from exc
     if check and result.returncode != 0:
         raise SyncError(git_error_message(args, result))
     return result
@@ -927,10 +932,10 @@ def _write_credential_store(path: Path, protocol: str, host: str, username: str,
     try:
         fd = os.open(str(path), flags, 0o600)
     except OSError as exc:
-        raise SyncError("Refusing to write git credentials: unsafe credential store path.") from exc
+        raise SyncError("拒绝写入 git 凭据：凭据存储路径不安全。") from exc
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise SyncError("Refusing to write git credentials: credential store is not a regular file.")
+            raise SyncError("拒绝写入 git 凭据：凭据存储不是常规文件。")
         os.fchmod(fd, 0o600)
         line = (
             f"{protocol}://{urllib.parse.quote(username, safe='')}:"
@@ -960,7 +965,7 @@ def prepare_git_credentials(ctx: Context, url: str) -> tuple[str, Path | None]:
     # Percent-decoding can smuggle CR/LF into the line-based store format and
     # git's credential protocol; reject it rather than let it inject fields.
     if any(_CRLF_NUL_RE.search(v) for v in (username, secret, host)):
-        raise SyncError("Git URL contains invalid characters in its credentials.")
+        raise SyncError("git URL 的凭据部分包含非法字符。")
     clean_url = f"{scheme}{rest}"
     ctx.state_dir.mkdir(parents=True, exist_ok=True)
     cred_file = ctx.state_dir / ".git-credentials"
@@ -974,7 +979,7 @@ def _cred_helper_value(cred_file: Path) -> str:
     HOME/XDG_DATA_HOME cannot break or extend the helper command line."""
     p = str(cred_file)
     if _CRLF_NUL_RE.search(p):
-        raise SyncError("Unsafe characters in the credential store path.")
+        raise SyncError("凭据存储路径包含不安全字符。")
     return "store --file=" + "'" + p.replace("'", "'\\''") + "'"
 
 
@@ -1000,13 +1005,13 @@ def git_error_message(args: list[str], result: subprocess.CompletedProcess[str])
     err = re.sub(r"\s+", " ", err)
     err = sanitize_url(err)
     if "Permission denied" in err or "Could not read from remote" in err:
-        return "Git could not authenticate with the remote. Set up SSH keys or a credential helper, then try again."
-    if "Repository not found" in err or "not found" in err.lower():
-        return "Remote repository was not found. Check the URL and that this machine can access it."
+        return "git 无法通过远程认证。请配置 SSH 密钥或凭据助手后重试。"
+    if "Repository not found" in err or "未找到" in err.lower():
+        return "找不到远程仓库。请检查 URL 以及本机是否有访问权限。"
     if "Authentication failed" in err or "could not read Username" in err:
-        return "Git asked for a username/password and we refused so the panel would not hang. Use SSH or a stored credential."
+        return "git 要求输入用户名/密码，为避免面板卡死已拒绝。请使用 SSH 或已存储的凭据。"
     if not err:
-        err = f"git {' '.join(args)} failed with exit {result.returncode}"
+        err = f"git {' '.join(args)} 失败，退出码 {result.returncode}"
     if len(err) > 400:
         err = err[:397] + "..."
     return err
@@ -1131,10 +1136,10 @@ def configured_repo(ctx: Context, state: dict[str, Any] | None = None) -> Path:
     state = state if state is not None else load_state(ctx)
     raw = state.get("clone_path") or ""
     if not raw:
-        raise SyncError("No config repo is linked yet. Paste a git URL to get started.")
+        raise SyncError("尚未链接配置仓库，粘贴 git URL 开始使用。")
     path = Path(raw)
     if not path.is_dir():
-        raise SyncError(f"Linked repo is missing on disk: {path}")
+        raise SyncError(f"链接的仓库在磁盘上不存在：{path}")
     return path
 
 
@@ -1142,17 +1147,17 @@ def validate_repo(path: Path) -> dict[str, Any]:
     reasons: list[str] = []
     score = 0
     if not path.is_dir():
-        return {"valid": False, "score": 0, "reasons": [], "error": f"Not a directory: {path}"}
+        return {"valid": False, "score": 0, "reasons": [], "error": f"不是目录：{path}"}
 
     marker = path / MARKER_NAME
     if marker.is_file():
         marker_data = load_json(marker, default={}, within=path)
         if isinstance(marker_data, dict) and marker_data.get("format") == MARKER_FORMAT:
             score += 5
-            reasons.append("Omarchy config marker")
+            reasons.append("Omarchy 配置标记")
         else:
             score += 1
-            reasons.append("config marker file")
+            reasons.append("配置标记文件")
 
     hypr = path / "hypr"
     hypr_files = []
@@ -1160,7 +1165,7 @@ def validate_repo(path: Path) -> dict[str, Any]:
         hypr_files = [p.name for p in hypr.iterdir() if p.is_file() and p.suffix in {".lua", ".conf"}]
         if hypr_files:
             score += 2
-            reasons.append(f"{len(hypr_files)} Hyprland config files")
+            reasons.append(f"{len(hypr_files)} 个 Hyprland 配置文件")
 
     shell = path / "omarchy" / "shell.json"
     if shell.is_file():
@@ -1177,20 +1182,20 @@ def validate_repo(path: Path) -> dict[str, Any]:
     plugin_ids += [pid for pid in repo_plugin_list(path) if pid not in plugin_ids]
     if plugin_ids:
         score += 2
-        reasons.append(f"{len(plugin_ids)} shell plugins")
+        reasons.append(f"{len(plugin_ids)} 个 shell 插件")
 
     if (path / "apply.sh").is_file() or (path / "sync.sh").is_file():
         score += 1
-        reasons.append("apply/sync scripts")
+        reasons.append("apply/sync 脚本")
 
     if (path / "terminals").is_dir() and any((path / "terminals").iterdir()):
         score += 1
-        reasons.append("terminal configs")
+        reasons.append("终端配置")
 
     has_core = bool(hypr_files) and (shell.is_file() or bool(plugin_ids) or (path / "apply.sh").is_file())
-    valid = score >= 3 and (has_core or any(r == "Omarchy config marker" for r in reasons))
+    valid = score >= 3 and (has_core or any(r == "Omarchy 配置标记" for r in reasons))
     if not hypr_files and not shell.is_file() and not plugin_ids:
-        valid = any(r == "Omarchy config marker" for r in reasons) and score >= 5
+        valid = any(r == "Omarchy 配置标记" for r in reasons) and score >= 5
 
     return {
         "valid": valid,
@@ -1281,29 +1286,29 @@ def summary_for(rel: str) -> str:
         return FILE_SUMMARIES[rel]
     if rel.startswith("plugins/"):
         name = rel.split("/")[1] if "/" in rel else rel
-        return f"Plugin {name}"
+        return f"插件 {name}"
     if rel == THEME_REL:
-        return "Selected Omarchy theme"
+        return "当前 Omarchy 主题"
     if rel.startswith("omarchy/themes/"):
         parts = rel.split("/")
         slug = parts[2] if len(parts) > 2 else ""
-        return f"Custom theme files ({theme_display_name(slug)})" if slug else "Custom theme files"
+        return f"自定义主题文件（{theme_display_name(slug)}）" if slug else "自定义主题文件"
     if rel.startswith("omarchy/hooks/"):
-        return "Automation hook"
+        return "自动化钩子"
     if rel.startswith("omarchy/agents/"):
-        return "Agent helper"
+        return "Agent 辅助程序"
     if rel.startswith("omarchy/branding/"):
-        return "Branding text"
+        return "品牌文案"
     if rel.startswith("omarchy/extensions/"):
-        return "Menu extension"
+        return "菜单扩展"
     if rel.startswith("terminals/"):
-        return "Terminal config"
+        return "终端配置"
     if rel.startswith("bin/"):
-        return "Helper script"
+        return "辅助脚本"
     if rel.startswith("hypr/"):
-        return "Hyprland config"
+        return "Hyprland 配置"
     if rel.startswith("omarchy/"):
-        return "Omarchy setting"
+        return "Omarchy 设置"
     return rel
 
 
@@ -1916,8 +1921,8 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
         # The clone is budgeted while git writes it; this catches a tree that
         # grew past the budget by any other route before we walk or hash it.
         raise SyncError(
-            f"Linked repo uses more than {format_byte_limit(MAX_REPO_DISK_BYTES)} on disk; "
-            "refusing to inspect it. Remove large files from the config repo."
+            f"链接仓库磁盘占用超过 {format_byte_limit(MAX_REPO_DISK_BYTES)}；"
+            "拒绝检查。请从配置仓库中移除大文件。"
         )
     repo_resolved = repo.resolve()
     home_resolved = ctx.home.resolve()
@@ -1942,8 +1947,8 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
             # size: a malicious/huge linked repo could otherwise balloon the
             # in-memory inventory long before any response-size check runs.
             raise SyncError(
-                f"Linked repo has more than {MAX_INVENTORY_FILES} tracked files; "
-                "refusing to build a diff to avoid unbounded memory use."
+                f"链接仓库的受跟踪文件超过 {MAX_INVENTORY_FILES} 个；"
+                "拒绝构建 diff，避免内存失控。"
             )
         try:
             # An intermediate directory symlink could alias a tracked path to
@@ -2079,7 +2084,7 @@ def collect_inventory(ctx: Context, repo: Path) -> list[dict[str, Any]]:
             add(rel, ctx.home / ".config" / rel, repo / rel, "theme")
 
     for rel, local_path in custom_sync_paths(ctx, repo):
-        add(rel, local_path, repo / rel, "custom", summary=f"Custom config ({rel})")
+        add(rel, local_path, repo / rel, "custom", summary=f"自定义配置（{rel}）")
 
     return [items[k] for k in sorted(items)]
 
@@ -2132,11 +2137,11 @@ def unified_preview(local_path: Path, repo_path: Path, local_within: Path | None
     except Exception:
         return ""
     if file_too_large(local_path) or file_too_large(repo_path):
-        return "Binary or very large file — open the paths to compare."
+        return "二进制或超大文件 —— 请打开对应路径自行比较。"
     local_text = read_text(local_path, within=local_within) if local_path.is_file() else ""
     repo_text = read_text(repo_path, within=repo_within) if repo_path.is_file() else ""
     if len(local_text) + len(repo_text) > MAX_DIFF_BYTES * 4:
-        return "Binary or very large file — open the paths to compare."
+        return "二进制或超大文件 —— 请打开对应路径自行比较。"
     diff = list(
         difflib.unified_diff(
             local_text.splitlines(),
@@ -2151,9 +2156,9 @@ def unified_preview(local_path: Path, repo_path: Path, local_within: Path | None
     clipped = diff[:MAX_DIFF_LINES]
     text = "\n".join(clipped)
     if len(diff) > MAX_DIFF_LINES:
-        text += f"\n… {len(diff) - MAX_DIFF_LINES} more lines"
+        text += f"\n… 省略 {len(diff) - MAX_DIFF_LINES} 行"
     if len(text) > MAX_DIFF_BYTES:
-        text = text[: MAX_DIFF_BYTES - 20] + "\n… truncated"
+        text = text[: MAX_DIFF_BYTES - 20] + "\n… 已截断"
     return text
 
 
@@ -2175,13 +2180,13 @@ def format_setting_change(label: str, old_val: Any, new_val: Any, status: str) -
     if old_val is None or old_val == "None":
         return f"{label}: {new_val}"
     if new_val is None or new_val == "None":
-        return f"{label}: {old_val} (removed)"
+        return f"{label}: {old_val}（已删除）"
     if status in {"repo", "added-repo"}:
         return f"{label}: {old_val} → {new_val}"
     elif status in {"local", "added-local"}:
         return f"{label}: {old_val} → {new_val}"
     else:
-        return f"{label}: local {old_val} vs repo {new_val}"
+        return f"{label}: 本机 {old_val} ↔ 仓库 {new_val}"
 
 
 def extract_shell_widgets(data: Any) -> set[str]:
@@ -2213,7 +2218,7 @@ def extra_shell_changes(before: dict[str, Any], after: dict[str, Any], status: s
 
     def label_for(path: tuple[str, ...]) -> str:
         if path[:2] == ("bar", "layout") and len(path) >= 3:
-            return " · ".join((f"Bar {path[2]}", *path[3:]))
+            return " · ".join((f"顶栏 {path[2]}", *path[3:]))
         return " · ".join(path)
 
     def walk(old: Any, new: Any, path: tuple[str, ...]) -> None:
@@ -2233,7 +2238,7 @@ def extra_shell_changes(before: dict[str, Any], after: dict[str, Any], status: s
                 if len(set(old_ids)) == len(old_ids) and len(set(new_ids)) == len(new_ids):
                     if old_ids != new_ids:
                         changes.append(format_setting_change(
-                            label_for(path) + " widgets", ", ".join(old_ids) or "none", ", ".join(new_ids) or "none", status
+                            label_for(path) + " 小组件", ", ".join(old_ids) or "none", ", ".join(new_ids) or "none", status
                         ))
                     old_by_id = {w["id"]: w for w in old_widgets}
                     for widget in new_widgets:
@@ -2341,25 +2346,25 @@ def summarize_file_diff(
         b_pos = (before.get("bar") or {}).get("position")
         a_pos = (after.get("bar") or {}).get("position")
         if b_pos != a_pos and (b_pos or a_pos):
-            changes.append(format_setting_change("Dock Bar", b_pos or "top", a_pos or "top", status))
+            changes.append(format_setting_change("顶栏", b_pos or "top", a_pos or "top", status))
 
         # Transparency
         b_tr = (before.get("bar") or {}).get("transparent")
         a_tr = (after.get("bar") or {}).get("transparent")
         if b_tr != a_tr and (b_tr is not None or a_tr is not None):
-            changes.append(format_setting_change("Bar transparency", "on" if b_tr else "off", "on" if a_tr else "off", status))
+            changes.append(format_setting_change("顶栏透明度", "on" if b_tr else "off", "on" if a_tr else "off", status))
 
         # Idle lock
         b_lock = (before.get("idle") or {}).get("lock")
         a_lock = (after.get("idle") or {}).get("lock")
         if b_lock != a_lock and (b_lock is not None or a_lock is not None):
-            changes.append(format_setting_change("Idle Lock", format_change_duration(b_lock), format_change_duration(a_lock), status))
+            changes.append(format_setting_change("闲置锁定", format_change_duration(b_lock), format_change_duration(a_lock), status))
 
         # Screensaver
         b_ss = (before.get("idle") or {}).get("screensaver")
         a_ss = (after.get("idle") or {}).get("screensaver")
         if b_ss != a_ss and (b_ss is not None or a_ss is not None):
-            changes.append(format_setting_change("Screensaver", format_change_duration(b_ss), format_change_duration(a_ss), status))
+            changes.append(format_setting_change("屏保", format_change_duration(b_ss), format_change_duration(a_ss), status))
 
         # Widgets
         b_w = extract_shell_widgets(before)
@@ -2370,13 +2375,13 @@ def summarize_file_diff(
             top_added = sorted(added)[:2]
             s = ", ".join("+" + w.split(".")[-1] for w in top_added)
             if len(added) > 2:
-                s += f" (+{len(added)-2} more)"
+                s += f"（另有 +{len(added)-2} 条）"
             changes.append(s)
         if removed:
             top_removed = sorted(removed)[:2]
             s = ", ".join("-" + w.split(".")[-1] for w in top_removed)
             if len(removed) > 2:
-                s += f" (-{len(removed)-2} more)"
+                s += f"（另有 -{len(removed)-2} 条）"
             changes.append(s)
 
         changes.extend(extra_shell_changes(before, after, status))
@@ -2386,7 +2391,7 @@ def summarize_file_diff(
         repo_name = theme_display_name(read_theme_slug(repo_path, within=repo_within)) or None
         if local_name != repo_name:
             old_name, new_name = (repo_name, local_name) if status in {"local", "added-local"} else (local_name, repo_name)
-            changes.append(format_setting_change("Theme", old_name, new_name, status))
+            changes.append(format_setting_change("主题", old_name, new_name, status))
 
     # 2. omarchy/shell.toml
     elif rel == "omarchy/shell.toml":
@@ -2398,7 +2403,7 @@ def summarize_file_diff(
             b_sz, a_sz = (loc_sz, rep_sz) if status in {"repo", "added-repo"} else (rep_sz, loc_sz)
             old_str = f"{b_sz}px" if b_sz else None
             new_str = f"{a_sz}px" if a_sz else None
-            changes.append(format_setting_change("Font base-size", old_str, new_str, status))
+            changes.append(format_setting_change("字体基准大小", old_str, new_str, status))
 
     # 3. Terminal configs
     elif rel.startswith("terminals/"):
@@ -2406,10 +2411,10 @@ def summarize_file_diff(
         rep_sz, rep_fam = parse_terminal_font_settings(rel, repo_text)
         if loc_sz != rep_sz and (loc_sz or rep_sz):
             b_sz, a_sz = (loc_sz, rep_sz) if status in {"repo", "added-repo"} else (rep_sz, loc_sz)
-            changes.append(format_setting_change("Font size", b_sz, a_sz, status))
+            changes.append(format_setting_change("字体大小", b_sz, a_sz, status))
         if loc_fam != rep_fam and (loc_fam or rep_fam):
             b_f, a_f = (loc_fam, rep_fam) if status in {"repo", "added-repo"} else (rep_fam, loc_fam)
-            changes.append(format_setting_change("Font", b_f, a_f, status))
+            changes.append(format_setting_change("字体", b_f, a_f, status))
 
     # 4. hypr/looknfeel.lua
     elif rel == "hypr/looknfeel.lua":
@@ -2422,17 +2427,17 @@ def summarize_file_diff(
         b_out = before_v.get("gaps_out")
         a_out = after_v.get("gaps_out")
         if (b_in != a_in or b_out != a_out) and (b_in or a_in or b_out or a_out):
-            changes.append(format_setting_change("Gaps", f"{b_in or 0}/{b_out or 0}", f"{a_in or 0}/{a_out or 0}", status))
+            changes.append(format_setting_change("间距", f"{b_in or 0}/{b_out or 0}", f"{a_in or 0}/{a_out or 0}", status))
 
         b_b = before_v.get("border_size")
         a_b = after_v.get("border_size")
         if b_b != a_b and (b_b or a_b):
-            changes.append(format_setting_change("Border", f"{b_b or 0}px", f"{a_b or 0}px", status))
+            changes.append(format_setting_change("边框", f"{b_b or 0}px", f"{a_b or 0}px", status))
 
         b_r = before_v.get("rounding")
         a_r = after_v.get("rounding")
         if b_r != a_r and (b_r or a_r):
-            changes.append(format_setting_change("Corners", f"{b_r or 0}px", f"{a_r or 0}px", status))
+            changes.append(format_setting_change("圆角", f"{b_r or 0}px", f"{a_r or 0}px", status))
 
         b_l = before_v.get("layout")
         a_l = after_v.get("layout")
@@ -2448,17 +2453,17 @@ def summarize_file_diff(
         b_kb = before_v.get("kb_layout")
         a_kb = after_v.get("kb_layout")
         if b_kb != a_kb and (b_kb or a_kb):
-            changes.append(format_setting_change("Keyboard", b_kb or "us", a_kb or "us", status))
+            changes.append(format_setting_change("键盘", b_kb or "us", a_kb or "us", status))
 
         b_tap = before_v.get("tap_to_click")
         a_tap = after_v.get("tap_to_click")
         if b_tap != a_tap and (b_tap or a_tap):
-            changes.append(format_setting_change("Tap-to-click", "on" if b_tap == "true" else "off", "on" if a_tap == "true" else "off", status))
+            changes.append(format_setting_change("轻触点击", "on" if b_tap == "true" else "off", "on" if a_tap == "true" else "off", status))
 
         b_nat = before_v.get("natural_scroll")
         a_nat = after_v.get("natural_scroll")
         if b_nat != a_nat and (b_nat or a_nat):
-            changes.append(format_setting_change("Natural scroll", "on" if b_nat == "true" else "off", "on" if a_nat == "true" else "off", status))
+            changes.append(format_setting_change("自然滚动", "on" if b_nat == "true" else "off", "on" if a_nat == "true" else "off", status))
 
         b_sens = before_v.get("sensitivity")
         a_sens = after_v.get("sensitivity")
@@ -2473,7 +2478,7 @@ def summarize_file_diff(
         rep_t = m_rep.group(1) if m_rep else None
         if loc_t != rep_t and (loc_t or rep_t):
             b_t, a_t = (loc_t, rep_t) if status in {"repo", "added-repo"} else (rep_t, loc_t)
-            changes.append(format_setting_change("Night light", f"{b_t}K" if b_t else "off", f"{a_t}K" if a_t else "off", status))
+            changes.append(format_setting_change("夜光", f"{b_t}K" if b_t else "off", f"{a_t}K" if a_t else "off", status))
 
     # 7. hypr/autostart.lua
     elif rel == "hypr/autostart.lua":
@@ -2491,13 +2496,13 @@ def summarize_file_diff(
     line_diff = difflib.SequenceMatcher(None, before_text.splitlines(), after_text.splitlines()).get_opcodes()
     added_n = sum(j2 - j1 for tag, i1, i2, j1, j2 in line_diff if tag in {"insert", "replace"})
     removed_n = sum(i2 - i1 for tag, i1, i2, j1, j2 in line_diff if tag in {"delete", "replace"})
-    line_summary = f"+{added_n}, -{removed_n} lines" if added_n or removed_n else ""
+    line_summary = f"+{added_n}, -{removed_n} 行" if added_n or removed_n else ""
 
     # Fallback diff if no specific keys matched
     if not changes:
         if status in {"added-repo", "added-local"}:
             lines = (local_text if status == "added-local" else repo_text).splitlines()
-            changes.append(f"New file ({len(lines)} lines)")
+            changes.append(f"新文件（{len(lines)} 行）")
         else:
             if line_summary:
                 changes.append(line_summary)
@@ -2717,8 +2722,8 @@ def bind_portability(
     local_dependencies = sorted(leftover & local_names)
     undefined_dependencies = sorted(leftover - local_names)
     if undefined_dependencies:
-        return False, command, "command is not self-contained", local_dependencies, undefined_dependencies
-    return False, command, "references a local defined elsewhere in the file", local_dependencies, []
+        return False, command, "命令不是自包含的", local_dependencies, undefined_dependencies
+    return False, command, "引用了文件中其他位置定义的 local", local_dependencies, []
 
 
 def shortcut_entry_portable_to(entry: dict[str, Any], destination_local_names: set[str]) -> bool:
@@ -2759,11 +2764,11 @@ def extract_bind_statements(text: str) -> list[dict[str, Any]]:
         unbind = UNBIND_RE.search(line) if not bind else None
         if bind:
             keys = bind.group(1).strip()
-            label = (bind.group(2) or "").strip() or "Custom binding"
+            label = (bind.group(2) or "").strip() or "自定义绑定"
             kind = "bind"
         elif unbind:
             keys = unbind.group(1).strip()
-            label = "Unbound default"
+            label = "默认解绑"
             kind = "unbind"
         else:
             continue
@@ -2859,22 +2864,22 @@ def shortcut_diff(
             label = repo_label or local_label or keys
             skip_reason = str((repo_e or {}).get("skip_reason") or "") if not repo_portable else ""
             if skip_reason:
-                detail = f"skipped — {skip_reason}"
+                detail = f"已跳过 — {skip_reason}"
             else:
-                detail = f"was: {local_label}" if change == "changed" and local_label else "new in repo"
+                detail = f"原值：{local_label}" if change == "changed" and local_label else "仓库新增"
         elif status in {"added-local", "local"}:
             label = local_label or repo_label or keys
             skip_reason = str((local_e or {}).get("skip_reason") or "") if not local_portable else ""
             if skip_reason:
-                detail = f"skipped — {skip_reason}"
+                detail = f"已跳过 — {skip_reason}"
             else:
-                detail = f"repo has: {repo_label}" if change == "changed" and repo_label else "new on this machine"
+                detail = f"仓库值：{repo_label}" if change == "changed" and repo_label else "本机新增"
         else:
             label = local_label or repo_label or keys
             skip_reason = str((local_e or {}).get("skip_reason") or (repo_e or {}).get("skip_reason") or "")
-            detail = f"this machine: {local_label} · repo: {repo_label}"
+            detail = f"本机：{local_label} · 仓库：{repo_label}"
             if skip_reason:
-                detail += f" · skipped — {skip_reason}"
+                detail += f" · 已跳过 — {skip_reason}"
         source_portable = (
             repo_portable if status in {"added-repo", "repo"} else local_portable if status in {"added-local", "local"} else (local_portable and repo_portable)
         )
@@ -2942,7 +2947,7 @@ def merge_shortcuts_file(
     if file_too_large(source) or file_too_large(dest):
         # read_text() degrades oversized files to ""; merging on top of that
         # would silently replace the user's bindings. Refuse instead.
-        raise SyncError("bindings.lua is too large to merge safely.")
+        raise SyncError("bindings.lua 过大，无法安全合并。")
     source_text = read_text(source, within=source_within) if (source.is_file() and not source.is_symlink() and not os.path.islink(source)) else ""
     source_entries = {e["keys"]: e for e in extract_bind_statements(source_text)}
     dest_text = read_text(dest, within=dest_within) if (dest.is_file() and not dest.is_symlink() and not os.path.islink(dest)) else ""
@@ -2968,7 +2973,7 @@ def filter_portable_shortcuts(
             skipped.append(
                 {
                     "keys": key,
-                    "reason": str((entry or {}).get("skip_reason") or "not a portable binding"),
+                    "reason": str((entry or {}).get("skip_reason") or "不可移植的绑定"),
                 }
             )
     return kept, skipped
@@ -2978,8 +2983,8 @@ def skipped_shortcut_note(skipped: list[dict[str, str]]) -> str:
     if not skipped:
         return ""
     n = len(skipped)
-    reason = skipped[0].get("reason") or "not a portable binding"
-    return f" Skipped {n} shortcut{'s' if n != 1 else ''} ({reason})."
+    reason = skipped[0].get("reason") or "不可移植的绑定"
+    return f" 已跳过 {n} 个快捷键（{reason}）。"
 
 
 def portable_shortcut_selection(
@@ -3009,7 +3014,7 @@ def unloadable_bind_entries(text: str) -> list[dict[str, Any]]:
     return [
         e
         for e in extract_bind_statements(text)
-        if not e.get("portable", True) and e.get("skip_reason") == "command is not self-contained"
+        if not e.get("portable", True) and e.get("skip_reason") == "命令不是自包含的"
     ]
 
 
@@ -3034,7 +3039,7 @@ def drop_unloadable_bindings_file(
     seen = {s["keys"] for s in skipped_shortcuts}
     for entry in unloadable:
         if entry["keys"] not in seen:
-            skipped_shortcuts.append({"keys": entry["keys"], "reason": str(entry.get("skip_reason") or "not a portable binding")})
+            skipped_shortcuts.append({"keys": entry["keys"], "reason": str(entry.get("skip_reason") or "不可移植的绑定")})
             seen.add(entry["keys"])
     if not shortcut_keys:
         shortcut_keys = [
@@ -3128,13 +3133,13 @@ def file_bundles(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
             event = parts[2]
             return "hooks:" + event, "hooks", event.replace(".d", "")
         if path.startswith("omarchy/agents/"):
-            return "agents", "agents", "Agent helpers"
+            return "agents", "agents", "Agent 辅助程序"
         if path.startswith("omarchy/branding/"):
             return "branding", "branding", "Branding"
         if path.startswith("omarchy/extensions/"):
-            return "extensions", "extensions", "Menu extensions"
+            return "extensions", "extensions", "菜单扩展"
         if path.startswith("bin/") and len(parts) >= 2:
-            return "bin", "bin", "Helper scripts"
+            return "bin", "bin", "辅助脚本"
         return None
 
     for item in files:
@@ -3167,21 +3172,20 @@ def file_bundles(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
         changed = [s for s in b["statuses"] if s not in {"identical", "machine"}]
         n = len(changed)
         removal = bool(b["all_removals"])
-        plural = "s" if n != 1 else ""
         if removal:
-            where = "here" if status in {"local", "added-local"} else "in the repo"
-            summary = f"Removed {where} · {n} file{plural}"
+            where = "本机" if status in {"local", "added-local"} else "仓库"
+            summary = f"{where}已删除 · {n} 个文件"
         elif b["kind"] == "plugin":
             if status == "added-repo":
-                summary = f"New plugin · {n} file{'s' if n != 1 else ''}"
+                summary = f"新插件 · {n} 个文件"
             elif status == "added-local":
-                summary = f"New on this machine · {n} file{'s' if n != 1 else ''}"
+                summary = f"本机新增 · {n} 个文件"
             else:
-                summary = f"Plugin updates · {n} file{'s' if n != 1 else ''}"
+                summary = f"插件更新 · {n} 个文件"
         elif b["kind"] == "hooks":
-            summary = f"{n} hook file{'s' if n != 1 else ''}"
+            summary = f"{n} 个钩子文件"
         else:
-            summary = f"{n} file{'s' if n != 1 else ''}"
+            summary = f"{n} 个文件"
         out.append(
             {
                 "id": b["id"],
@@ -3245,17 +3249,17 @@ def apply_omarchy_theme(slug: str, dry_run: bool) -> str:
     if dry_run or not slug:
         return ""
     if not re.match(r"^[a-zA-Z0-9_][a-zA-Z0-9._-]*$", slug) or slug.startswith("-"):
-        return "Invalid theme slug"
+        return "无效的主题标识"
     binary = shutil.which("omarchy")
     if not binary:
-        return "omarchy CLI not found; theme name was copied but not applied"
+        return "未找到 omarchy CLI；主题名已复制但未应用"
     try:
         result = run_bounded([binary, "theme", "set", "--", slug], timeout=90)
     except subprocess.TimeoutExpired:
-        return f"omarchy theme set {slug} timed out"
+        return f"omarchy theme set {slug} 超时"
     if result.returncode != 0:
         err = (result.stderr or result.stdout or "failed").strip()
-        return err or f"omarchy theme set {slug} failed"
+        return err or f"omarchy theme set {slug} 执行失败"
     return "ok"
 
 
@@ -3780,7 +3784,7 @@ def cmd_connect(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
             # allow worktrees / git files
             probe = run_git(repo, ["rev-parse", "--is-inside-work-tree"])
             if probe.returncode != 0:
-                raise SyncError(f"{repo} is not a git repository.")
+                raise SyncError(f"{repo} 不是 git 仓库。")
         return finish_connect(ctx, repo, git_out(repo, "remote", "get-url", "origin") or str(repo), using_existing=True, fetch=True)
 
     clean_url, cred_file = prepare_git_credentials(ctx, value)
@@ -3799,7 +3803,7 @@ def cmd_connect(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
             if fetch_error:
                 raise SyncError(fetch_error)
             result = run_git(clone_path, ["pull", "--ff-only"], timeout=40, disk_root=clone_path)
-            if result.returncode != 0 and "on-disk budget" in (result.stderr or ""):
+            if result.returncode != 0 and "磁盘限额" in (result.stderr or ""):
                 raise SyncError(git_error_message(["pull", "--ff-only"], result))
         else:
             # Different remote: move the old clone aside rather than deleting blindly.
@@ -3835,7 +3839,7 @@ def cmd_connect(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
 
     try:
         snap = finish_connect(ctx, clone_path, clean_url, using_existing=False, fetch=False)
-        snap["message"] = snap.get("message") or f"Linked {clean_url}"
+        snap["message"] = snap.get("message") or f"已链接 {clean_url}"
         return snap
     except SyncError:
         if not existing_state.get("using_existing_clone"):
@@ -3850,9 +3854,9 @@ def finish_connect(ctx: Context, repo: Path, repo_url: str, using_existing: bool
     empty = is_seedable_empty(repo)
     if not validation["valid"] and not empty:
         raise SyncError(
-            "That git repo is not an Omarchy config repo, and it is not empty either. "
-            "Use a private repo that is empty (to seed from this machine) or one that already "
-            "has hypr/ configs plus shell.json, plugins/, or apply.sh.",
+            "该 git 仓库不是 Omarchy 配置仓库，也不是空仓库。"
+            "请使用空的私有仓库（从本机初始化），或已包含"
+            "hypr/ 配置及 shell.json、plugins/ 或 apply.sh 的仓库。",
             extra={"validation": validation},
         )
     state = {
@@ -3871,8 +3875,8 @@ def finish_connect(ctx: Context, repo: Path, repo_url: str, using_existing: bool
     snap["empty"] = empty
     if empty:
         snap["message"] = (
-            "Linked an empty private repo. Review the Configs tab "
-            "(this machine), then Publish to seed the repo. Keep it private."
+            "已链接空的私有仓库。请在「配置」标签页查看本机内容"
+            "，然后点击「发布本机」初始化仓库。请保持私有。"
         )
     return snap
 
@@ -3909,22 +3913,22 @@ def copy_mapped_file(
         src_fd = os.open(str(src), flags)
     except OSError as exc:
         if exc.errno == errno.ELOOP:
-            raise SyncError(f"Refusing to copy symlink: {src}") from exc
-        raise SyncError(f"Missing source file: {src}") from exc
+            raise SyncError(f"拒绝复制符号链接：{src}") from exc
+        raise SyncError(f"源文件不存在：{src}") from exc
     dir_fd: int | None = None
     try:
         st = os.fstat(src_fd)
         if not stat.S_ISREG(st.st_mode):
-            raise SyncError(f"Refusing to copy non-regular file: {src}")
+            raise SyncError(f"拒绝复制非常规文件：{src}")
         if st.st_size > MAX_SYNC_FILE_BYTES:
-            raise SyncError(f"Refusing to copy oversized file: {src}")
+            raise SyncError(f"拒绝复制超限文件：{src}")
         if src_root is not None:
             proc_link = f"/proc/self/fd/{src_fd}"
             if not os.path.lexists(proc_link):
-                raise SyncError("Cannot verify copy containment without /proc; refusing to copy.")
+                raise SyncError("没有 /proc 无法验证复制包含关系，拒绝复制。")
             actual = Path(os.path.realpath(proc_link))
             if not actual.is_relative_to(src_root.resolve()):
-                raise SyncError(f"Refusing to copy {src}: it resolves outside {src_root}")
+                raise SyncError(f"拒绝复制 {src}：解析结果超出 {src_root}")
         # Plugin helpers, bin/, and hooks keep the execute bit. A script
         # smuggled anywhere else (themes, hypr, …) lands non-executable.
         target_mode = copy_destination_mode(item["path"], st.st_mode, src_fd)
@@ -3932,7 +3936,7 @@ def copy_mapped_file(
             try:
                 rel = dst.relative_to(dst_root)
             except ValueError as exc:
-                raise SyncError(f"Refusing to write {dst}: outside {dst_root}") from exc
+                raise SyncError(f"拒绝写入 {dst}：超出 {dst_root} 范围") from exc
             dir_fd = _open_dir_bound(dst_root, rel.parent)
             dst_name = rel.name
         else:
@@ -3951,7 +3955,7 @@ def copy_mapped_file(
                 if budget is not None:
                     budget.consume(written)
                 if remaining <= 0:
-                    raise SyncError(f"Refusing to copy {src}: it grew past the size limit during the copy.")
+                    raise SyncError(f"拒绝复制 {src}：复制过程中超出大小限制。")
 
         _replace_at(dir_fd, dst_name, target_mode, body)
     finally:
@@ -3992,9 +3996,9 @@ def remove_mapped_file(item: dict[str, Any], direction: str, dst_root: Path) -> 
     try:
         rel = dst.relative_to(dst_root)
     except ValueError as exc:
-        raise SyncError(f"Refusing to delete {dst}: outside {dst_root}") from exc
+        raise SyncError(f"拒绝删除 {dst}：超出 {dst_root} 范围") from exc
     if not rel.parts:
-        raise SyncError(f"Refusing to delete {dst}")
+        raise SyncError(f"拒绝删除 {dst}")
     try:
         dir_fd = _open_dir_bound(dst_root, rel.parent, create=False)
     except SyncError:
@@ -4005,7 +4009,7 @@ def remove_mapped_file(item: dict[str, Any], direction: str, dst_root: Path) -> 
         except FileNotFoundError:
             return False
         if not stat.S_ISREG(st.st_mode):
-            raise SyncError(f"Refusing to delete non-regular file: {dst}")
+            raise SyncError(f"拒绝删除非常规文件：{dst}")
         os.unlink(rel.name, dir_fd=dir_fd)
     finally:
         os.close(dir_fd)
@@ -4053,7 +4057,7 @@ def backup_local(ctx: Context, files: list[dict[str, Any]], budget: ByteBudget |
                         budget.consume(written)
                     if remaining <= 0:
                         raise SyncError(
-                            f"Backup aborted: {src} grew past the size limit while it was being copied."
+                            f"备份已中止：{src} 在复制时超出了大小限制。"
                         )
 
             _write_within(ctx.home, dest, 0o600, body)
@@ -4063,7 +4067,7 @@ def backup_local(ctx: Context, files: list[dict[str, Any]], budget: ByteBudget |
     backup_dir.mkdir(parents=True, exist_ok=True)
     atomic_write_text(
         backup_dir / "README.txt",
-        f"Omarchy config-sync backup of {copied} files at {now_iso()}\n",
+        f"Omarchy 配置同步备份：{now_iso()} 共 {copied} 个文件\n",
         mode=0o600,
         within=ctx.home,
     )
@@ -4084,8 +4088,8 @@ def _check_operation_size(paths: list[str], what: str) -> None:
             total += st.st_size
     if total > MAX_SYNC_TOTAL_BYTES:
         raise SyncError(
-            f"{what} selection totals {format_byte_limit(total)}, above the "
-            f"{format_byte_limit(MAX_SYNC_TOTAL_BYTES)} per-operation size limit; select fewer files at a time."
+            f"{what} 所选合计 {format_byte_limit(total)}，超过"
+            f"单次操作上限 {format_byte_limit(MAX_SYNC_TOTAL_BYTES)}，请减少一次勾选的文件数量。"
         )
 
 
@@ -4225,13 +4229,13 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     git_fields = integrate_remote(repo, git_fields)
     if git_fields["conflicts"]:
         raise SyncError(
-            "The git clone has merge conflicts. Resolve them before applying.",
+            "git 克隆存在合并冲突，请先解决再应用。",
             extra={"conflicts": git_fields["conflicts"]},
         )
     if git_fields["behind"]:
         raise SyncError(
             git_fields.get("merge_error")
-            or "The clone has uncommitted changes, so origin could not be merged in. Open the clone and clean it up, then Apply.",
+            or "克隆中有未提交的改动，无法合并 origin。请打开克隆清理后再应用。",
             extra={"ahead": git_fields["ahead"], "behind": git_fields["behind"]},
         )
     diff = annotate_diff(ctx, repo, state)
@@ -4266,7 +4270,7 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     ]
     if unresolved_both and wanted is None:
         raise SyncError(
-            "Some files changed on both this machine and the repo. Pick Keep local or Take repo for each, then Apply.",
+            "部分文件在本机与仓库都有改动。请逐项选择「保留本机」或「采用仓库」，然后应用。",
             extra={"both": [i["path"] for i in unresolved_both]},
         )
     chosen = selected_items(diff["files"], wanted, bool(args.include_machine), "apply")
@@ -4287,7 +4291,7 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         snap["applied"] = []
         snap["removed"] = []
         snap["skipped_shortcuts"] = skipped_shortcuts
-        snap["message"] = "Nothing to apply." + skipped_shortcut_note(skipped_shortcuts)
+        snap["message"] = "没有可应用的内容。" + skipped_shortcut_note(skipped_shortcuts)
         return snap
 
     if getattr(args, "dry_run", False):
@@ -4307,8 +4311,8 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         snap["skipped_shortcuts"] = skipped_shortcuts
         snap["dry_run"] = True
         snap["message"] = (
-            f"Dry run: would apply {len(applied)} file{'s' if len(applied) != 1 else ''}"
-            + (f" ({len(removed)} removed from this machine)" if removed else "")
+            f"试运行：将应用 {len(applied)} 个文件"
+            + (f"（{len(removed)} 个已从本机删除）" if removed else "")
             + "."
             + skipped_shortcut_note(skipped_shortcuts)
         )
@@ -4334,7 +4338,7 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         [i["repo_path"] for i in chosen if not i.get("removal")] + [i["local_path"] for i in backup_targets],
         "Apply",
     )
-    budget = ByteBudget(MAX_SYNC_TOTAL_BYTES, "Apply")
+    budget = ByteBudget(MAX_SYNC_TOTAL_BYTES, "应用")
     backup_dir = backup_local(ctx, backup_targets, budget=budget)
     applied = []
     removed = []
@@ -4398,10 +4402,10 @@ def cmd_apply(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     if THEME_REL in applied:
         slug = read_theme_slug(ctx.theme_name_path, within=ctx.home)
         if slug:
-            theme_msg = f" Theme set to {theme_display_name(slug)}."
+            theme_msg = f" 主题已设置为 {theme_display_name(slug)}。"
     snap["message"] = (
-        f"Applied {len(applied)} file{'s' if len(applied) != 1 else ''} from the repo"
-        + (f" ({len(removed)} removed from this machine)" if removed else "")
+        f"已从仓库应用 {len(applied)} 个文件"
+        + (f"（{len(removed)} 个已从本机删除）" if removed else "")
         + f".{theme_msg}"
         + skipped_shortcut_note(skipped_shortcuts)
     )
@@ -4439,13 +4443,13 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     git_fields = integrate_remote(repo, git_fields)
     if git_fields["conflicts"]:
         raise SyncError(
-            "The git clone has merge conflicts. Resolve them before publishing.",
+            "git 克隆存在合并冲突，请先解决再发布。",
             extra={"conflicts": git_fields["conflicts"]},
         )
     if git_fields["behind"]:
         raise SyncError(
             git_fields.get("merge_error")
-            or "The clone has uncommitted changes, so origin could not be merged in. Open the clone and clean it up, then Publish.",
+            or "克隆中有未提交的改动，无法合并 origin。请打开克隆清理后再发布。",
             extra={"ahead": git_fields["ahead"], "behind": git_fields["behind"]},
         )
     diff = annotate_diff(ctx, repo, state)
@@ -4486,7 +4490,7 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     ]
     if unresolved_both and wanted is None:
         raise SyncError(
-            "Some files changed on both this machine and the repo. Pick Keep local or Take repo for each, then Publish.",
+            "部分文件在本机与仓库都有改动。请逐项选择「保留本机」或「采用仓库」，然后发布。",
             extra={"both": [i["path"] for i in unresolved_both]},
         )
     chosen = selected_items(diff["files"], wanted, bool(args.include_machine), "publish")
@@ -4509,18 +4513,18 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
             snap["removed"] = []
             snap["skipped_shortcuts"] = skipped_shortcuts
             snap["dry_run"] = True
-            snap["message"] = "Dry run: nothing to publish." + skipped_shortcut_note(skipped_shortcuts)
+            snap["message"] = "试运行：没有可发布的内容。" + skipped_shortcut_note(skipped_shortcuts)
             return snap
         if args.push and git_fields["ahead"] and not git_fields["behind"]:
             result = run_git(repo, ["push", "-u", "origin", "HEAD"], timeout=PUSH_TIMEOUT)
             snap = build_snapshot(ctx, fetch=False)
             if result.returncode != 0:
                 snap["push_error"] = git_error_message(["push"], result)
-                snap["message"] = "Nothing new to commit, and push failed: " + snap["push_error"]
+                snap["message"] = "没有新内容可提交，且推送失败：" + snap["push_error"]
             else:
                 snap["pushed"] = True
                 snap["published"] = []
-                snap["message"] = "Pushed existing local commits to origin."
+                snap["message"] = "已将本地提交推送到 origin。"
             snap["removed"] = []
             snap["skipped_shortcuts"] = skipped_shortcuts
             return snap
@@ -4528,7 +4532,7 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         snap["published"] = []
         snap["removed"] = []
         snap["skipped_shortcuts"] = skipped_shortcuts
-        snap["message"] = "Nothing to publish." + skipped_shortcut_note(skipped_shortcuts)
+        snap["message"] = "没有可发布的内容。" + skipped_shortcut_note(skipped_shortcuts)
         return snap
 
     if getattr(args, "dry_run", False):
@@ -4552,15 +4556,14 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         snap["pushed"] = False
         snap["dry_run"] = True
         snap["message"] = (
-            f"Dry run: would publish {publish_count_text(published, plugin_list_ids)}"
-            + (f" ({len(removed)} removed)" if removed else "")
-            + "."
+            f"试运行：将发布 {publish_count_text(published, plugin_list_ids)}"
+            + (f"（{len(removed)} 个已删除）" if removed else "")
             + skipped_shortcut_note(skipped_shortcuts)
         )
         return snap
 
     _check_operation_size([i["local_path"] for i in chosen if not i.get("removal")], "Publish")
-    budget = ByteBudget(MAX_SYNC_TOTAL_BYTES, "Publish")
+    budget = ByteBudget(MAX_SYNC_TOTAL_BYTES, "发布")
     write_marker(repo)
     published = []
     removed = []
@@ -4595,12 +4598,12 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     if porcelain:
         host = socket.gethostname()
         removed_set = set(removed)
-        listed = "\n".join(f"- {'removed ' if p in removed_set else ''}{p}" for p in published[:30])
+        listed = "\n".join(f"- {'已删除 ' if p in removed_set else ''}{p}" for p in published[:30])
         if len(published) > 30:
-            listed += f"\n- … {len(published) - 30} more"
+            listed += f"\n- … 其余 {len(published) - 30} 项"
         if plugin_list_ids:
             listed = "\n".join(filter(None, [listed] + [f"- {PLUGIN_LIST_REL}: {pid}" for pid in plugin_list_ids]))
-        message = args.message or f"Sync config from {host}\n\n{listed}\n"
+        message = args.message or f"同步 {host} 的配置\n\n{listed}\n"
         result = run_git(repo, ["commit", "-m", message], timeout=30)
         if result.returncode != 0:
             raise SyncError(git_error_message(["commit"], result))
@@ -4639,14 +4642,14 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         snap["push_error"] = push_error
         snap["ok"] = True
         snap["message"] = (
-            f"Saved {publish_count_text(published, plugin_list_ids)} in the repo, but push failed: {push_error}"
+            f"已保存 {publish_count_text(published, plugin_list_ids)} 到仓库，但推送失败：{push_error}"
             + skipped_shortcut_note(skipped_shortcuts)
         )
     else:
         snap["message"] = (
-            f"Published {publish_count_text(published, plugin_list_ids)} to the repo"
-            + (f" ({len(removed)} removed)" if removed else "")
-            + (" and pushed." if pushed else ". Commit is local until you push.")
+            f"已发布 {publish_count_text(published, plugin_list_ids)} 到仓库"
+            + (f"（{len(removed)} 个已删除）" if removed else "")
+            + ("，并已推送。" if pushed else "。提交仅在本地，推送后才会共享。")
             + skipped_shortcut_note(skipped_shortcuts)
         )
     snap["skipped_shortcuts"] = skipped_shortcuts
@@ -4655,7 +4658,7 @@ def cmd_publish(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
 
 
 def cmd_resync(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
-    """Make this machine match the repo, or publish this machine over the repo."""
+    """让本机与仓库一致，或将本机发布覆盖到仓库。"""
     side = (args.side or "repo").strip().lower()
     if side in {"local", "ours", "this"}:
         side = "local"
@@ -4673,7 +4676,7 @@ def cmd_resync(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
             conflicts = git_status_fields(repo).get("conflicts") or []
             if conflicts:
                 raise SyncError(
-                    "Git merge conflicts. Resolve them, then Resync from repo again.",
+                    "存在 git 合并冲突。请先解决，然后再次「从仓库重新同步」。",
                     extra={"conflicts": conflicts},
                 )
             raise SyncError(git_error_message(["merge"], merge))
@@ -4733,20 +4736,20 @@ def cmd_resync(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     if side == "repo":
         if not files and not shortcuts and not plugins and not theme:
             snap = build_snapshot(ctx, fetch=False)
-            snap["message"] = "Nothing from the repo to apply. This machine may already match."
+            snap["message"] = "仓库没有可应用的内容，本机可能已是最新。"
             return snap
         result = cmd_apply(ctx, nested)
-        result["message"] = "Resynced this machine from the repo. " + str(result.get("message") or "")
+        result["message"] = "已从仓库重新同步本机。" + str(result.get("message") or "")
         result["resync"] = "repo"
         return result
 
     nested.push = True
     if not files and not shortcuts and not plugins and not list_plugins and not theme and not git_fields.get("ahead"):
         snap = build_snapshot(ctx, fetch=False)
-        snap["message"] = "Nothing local to publish."
+        snap["message"] = "本机没有可发布的内容。"
         return snap
     result = cmd_publish(ctx, nested)
-    result["message"] = "Published this machine as the source of truth. " + str(result.get("message") or "")
+    result["message"] = "已将本机作为基准发布。" + str(result.get("message") or "")
     result["resync"] = "local"
     return result
 
@@ -4759,7 +4762,7 @@ def cmd_pull(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     git_fields = git_status_fields(repo)
     if not git_fields["behind"] and not git_fields["conflicts"]:
         snap = build_snapshot(ctx, fetch=False)
-        snap["message"] = "Already up to date with origin."
+        snap["message"] = "已与 origin 保持同步。"
         snap["pulled"] = False
         return snap
     ensure_git_identity(repo)
@@ -4768,31 +4771,31 @@ def cmd_pull(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         conflicts = git_status_fields(repo).get("conflicts") or []
         if conflicts:
             return fail(
-                "Merge conflicts. Keep local (ours) or take incoming (theirs) for each file.",
+                "合并冲突。请为每个文件选择保留本机（ours）或采用传入（theirs）。",
                 conflicts=conflicts,
                 sync_state="conflicts",
             )
         raise SyncError(git_error_message(["merge"], result))
     snap = build_snapshot(ctx, fetch=False)
     snap["pulled"] = True
-    snap["message"] = "Pulled the latest commits from origin."
+    snap["message"] = "已拉取 origin 最新提交。"
     return snap
 
 
 def cmd_resolve(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     repo = configured_repo(ctx)
     if not args.args:
-        raise SyncError("Pass the conflicted path to resolve.")
+        raise SyncError("请传入要解决冲突的路径。")
     rel = args.args[0]
     side = (args.side or (args.args[1] if len(args.args) > 1 else "") or "").strip().lower()
     if side in {"local", "ours"}:
         checkout = "--ours"
-        label = "local (ours)"
+        label = "本机（ours）"
     elif side in {"repo", "theirs", "incoming"}:
         checkout = "--theirs"
-        label = "incoming (theirs)"
+        label = "传入（theirs）"
     else:
-        raise SyncError("Side must be ours/local or theirs/repo.")
+        raise SyncError("side 必须是 ours/local 或 theirs/repo。")
     result = run_git(repo, ["checkout", checkout, "--", rel], disk_root=repo)
     if result.returncode != 0:
         raise SyncError(git_error_message(["checkout", checkout, rel], result))
@@ -4816,7 +4819,7 @@ def cmd_set_url(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     source_raw = read_source_argument(args)
     kind, value = normalize_source(source_raw)
     if kind != "url":
-        raise SyncError("set-url expects a git remote URL.")
+        raise SyncError("set-url 需要一个 git 远程 URL。")
     clean_url, cred_file = prepare_git_credentials(ctx, value)
     result = run_git(repo, ["remote", "get-url", "origin"])
     if result.returncode != 0:
@@ -4828,7 +4831,7 @@ def cmd_set_url(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     state["repo_url"] = clean_url
     save_state(ctx, state)
     snap = build_snapshot(ctx, fetch=True)
-    snap["message"] = f"Origin set to {clean_url}"
+    snap["message"] = f"origin 已设为 {clean_url}"
     return snap
 
 
@@ -4901,7 +4904,7 @@ def open_in_file_manager(target_path: str | Path) -> bool:
 def cmd_open(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     raw_path = args.args[0] if args.args else getattr(args, "files", None) or ""
     if not raw_path:
-        raise SyncError("No path provided to open.")
+        raise SyncError("未提供要打开的路径。")
     target = Path(raw_path).expanduser()
     if not target.is_absolute():
         try:
@@ -4988,7 +4991,7 @@ def open_in_terminal(target_path: str | Path) -> bool:
 def cmd_terminal(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     raw_path = args.args[0] if args.args else getattr(args, "files", None) or ""
     if not raw_path:
-        raise SyncError("No path provided to open in terminal.")
+        raise SyncError("未提供要在终端中打开的路径。")
     target = Path(raw_path).expanduser()
     if not target.is_absolute():
         try:
@@ -5019,7 +5022,7 @@ def cmd_hide(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     if args.files:
         keys.extend(p.strip() for p in args.files.split(",") if p.strip())
     if not keys:
-        raise SyncError("Provide at least one item to hide.")
+        raise SyncError("请至少提供一个要隐藏的条目。")
     for k in keys:
         if k not in hidden:
             hidden.append(k)
@@ -5027,7 +5030,7 @@ def cmd_hide(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     save_state(ctx, state)
     snap = build_snapshot(ctx, fetch=False)
     snap["hidden"] = hidden
-    snap["message"] = f"Hidden {len(keys)} item{'s' if len(keys) != 1 else ''}."
+    snap["message"] = f"已隐藏 {len(keys)} 项。"
     return snap
 
 
@@ -5040,13 +5043,13 @@ def cmd_unhide(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         save_state(ctx, state)
         snap = build_snapshot(ctx, fetch=False)
         snap["hidden"] = []
-        snap["message"] = f"Unhid all {count} item{'s' if count != 1 else ''}."
+        snap["message"] = f"已取消隐藏全部 {count} 项。"
         return snap
     keys = list(args.args)
     if args.files:
         keys.extend(p.strip() for p in args.files.split(",") if p.strip())
     if not keys:
-        raise SyncError("Provide at least one item to unhide, or use --all.")
+        raise SyncError("请至少提供一个要取消隐藏的条目，或使用 --all。")
     remove_set = set(keys)
     state["hidden"] = [
         k
@@ -5068,7 +5071,7 @@ def cmd_unhide(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
     save_state(ctx, state)
     snap = build_snapshot(ctx, fetch=False)
     snap["hidden"] = state["hidden"]
-    snap["message"] = f"Unhid {len(keys)} item{'s' if len(keys) != 1 else ''}."
+    snap["message"] = f"已取消隐藏 {len(keys)} 项。"
     return snap
 
 
@@ -5157,7 +5160,7 @@ def cmd_update_plugin(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Omarchy config-sync backend")
+    parser = argparse.ArgumentParser(description="Omarchy 配置同步后端")
     parser.add_argument(
         "command",
         choices=[
@@ -5195,7 +5198,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--delete-clone", action="store_true")
     parser.add_argument("--side", default=None)
     parser.add_argument("--url", default=None)
-    parser.add_argument("--stdin", action="store_true", help="Read input URL from stdin")
+    parser.add_argument("--stdin", action="store_true", help="从 stdin 读取输入 URL")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -5235,7 +5238,7 @@ def dispatch(ctx: Context, args: argparse.Namespace) -> dict[str, Any]:
         return cmd_update_plugin(ctx, args)
     if command == "reinstall-plugin":
         return cmd_reinstall_plugin(ctx, args)
-    raise SyncError(f"Unknown command: {command}")
+    raise SyncError(f"未知命令：{command}")
 
 
 def compact_snapshot_payload(result: dict[str, Any]) -> dict[str, Any]:
@@ -5274,7 +5277,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = json.dumps(result, ensure_ascii=False)
     if len(payload.encode("utf-8")) > MAX_RESPONSE_BYTES:
         # Enforce the bound before writing, not after the panel has buffered it all.
-        result = fail("Sync response exceeded the maximum size (5MB); the repo has too much changed data to display safely.")
+        result = fail("同步响应超出大小上限（5MB）；仓库变更过多，无法安全显示。")
         payload = json.dumps(result, ensure_ascii=False)
     sys.stdout.write(payload + "\n")
     return 0 if result.get("ok") else 1

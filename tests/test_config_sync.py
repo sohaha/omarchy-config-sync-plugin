@@ -233,7 +233,7 @@ class ShortcutTests(unittest.TestCase):
             {"keys": "SUPER + DOWN", "label": "Copy", "kind": "bind"},
         ])
         self.assertEqual(cs.parse_shortcuts(text + 'hl.unbind("SUPER + DOWN")\n'), [
-            {"keys": "SUPER + DOWN", "label": "Unbound default", "kind": "unbind"},
+            {"keys": "SUPER + DOWN", "label": "默认解绑", "kind": "unbind"},
         ])
 
     def test_new_rebinds_are_outgoing_and_publish_preserves_rebind(self) -> None:
@@ -277,7 +277,7 @@ class ShortcutTests(unittest.TestCase):
         self.assertEqual(len(keys), len(set(keys)))
         labels = {r["keys"]: r["label"] for r in rows}
         self.assertEqual(labels["SUPER + SHIFT + R"], "dup")
-        self.assertEqual(labels["CTRL + 9"], "Custom binding")
+        self.assertEqual(labels["CTRL + 9"], "自定义绑定")
 
     def test_unbind_then_bind_keeps_the_bind(self) -> None:
         rows = cs.extract_bind_statements(
@@ -291,7 +291,7 @@ class ShortcutTests(unittest.TestCase):
 
     def test_unbind_without_bind(self) -> None:
         rows = cs.parse_shortcuts('hl.unbind("SUPER + SHIFT + B")\n')
-        self.assertEqual(rows, [{"keys": "SUPER + SHIFT + B", "label": "Unbound default", "kind": "unbind"}])
+        self.assertEqual(rows, [{"keys": "SUPER + SHIFT + B", "label": "默认解绑", "kind": "unbind"}])
 
     def test_rebind_vs_unbind_only_is_a_shortcut_diff(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -307,7 +307,7 @@ class ShortcutTests(unittest.TestCase):
             rows = {r["keys"]: r for r in cs.shortcut_diff(local, repo, stored)}
             self.assertIn("XF86MonBrightnessUp", rows)
             self.assertEqual(rows["XF86MonBrightnessUp"]["status"], "repo")
-            self.assertEqual(rows["XF86MonBrightnessUp"]["repo_label"], "Unbound default")
+            self.assertEqual(rows["XF86MonBrightnessUp"]["repo_label"], "默认解绑")
             self.assertEqual(rows["XF86MonBrightnessUp"]["local_label"], "Brightness up")
 
     def test_comment_only_bindings_file_has_no_shortcut_rows(self) -> None:
@@ -508,7 +508,7 @@ class ShortcutTests(unittest.TestCase):
             rows = {r["keys"]: r for r in snap["diff"]["shortcuts"]}
             self.assertIn("SUPER + Q", rows)
             self.assertFalse(rows["SUPER + Q"]["default_apply"])
-            self.assertIn("skipped", rows["SUPER + Q"]["detail"])
+            self.assertIn("已跳过", rows["SUPER + Q"]["detail"])
             applied = cs.cmd_apply(
                 env.ctx,
                 argparse_ns(explicit=True, files="", shortcut=["SUPER + Q"]),
@@ -765,7 +765,7 @@ class InspectAndSyncTests(unittest.TestCase):
             self.assertFalse((repo / "plugins" / cs.PLUGIN_ID / "manifest.json").is_file())
             self.assertTrue(published["committed"])
             log = git(repo, "log", "-1", "--pretty=%s").stdout
-            self.assertIn("Sync config from", log)
+            self.assertIn("同步", log)
 
     def test_self_plugin_is_ignored_from_diffs_and_bundles(self) -> None:
         with TempHome() as env:
@@ -810,7 +810,7 @@ class InspectAndSyncTests(unittest.TestCase):
             self.assertEqual(statuses["hypr/bindings.lua"], "both")
             with self.assertRaises(cs.SyncError) as raised:
                 cs.cmd_apply(env.ctx, argparse_ns())
-            self.assertIn("both", str(raised.exception).lower())
+            self.assertIn("本机与仓库", str(raised.exception))
             forced = cs.cmd_apply(env.ctx, argparse_ns(files="hypr/bindings.lua"))
             self.assertTrue(forced["ok"], forced)
             self.assertIn("SUPER + R", (env.ctx.config_hypr / "bindings.lua").read_text(encoding="utf-8"))
@@ -848,7 +848,7 @@ class InspectAndSyncTests(unittest.TestCase):
             self.assertEqual(len(plugin_bundles), 1, bundles)
             self.assertGreaterEqual(plugin_bundles[0]["changed_count"], 17)
             self.assertEqual(plugin_bundles[0]["status"], "added-repo")
-            self.assertIn("New plugin", plugin_bundles[0]["summary"])
+            self.assertIn("新插件", plugin_bundles[0]["summary"])
             incoming_files = [
                 f["path"]
                 for f in snap["diff"]["files"]
@@ -1188,9 +1188,9 @@ class SecurityTests(unittest.TestCase):
             cs.normalize_source("https://github.com/you/repo\0.git")
 
     def test_theme_slug_validation(self) -> None:
-        self.assertEqual(cs.apply_omarchy_theme("--help", dry_run=False), "Invalid theme slug")
-        self.assertEqual(cs.apply_omarchy_theme("cat; rm -rf /", dry_run=False), "Invalid theme slug")
-        self.assertEqual(cs.apply_omarchy_theme("-v", dry_run=False), "Invalid theme slug")
+        self.assertEqual(cs.apply_omarchy_theme("--help", dry_run=False), "无效的主题标识")
+        self.assertEqual(cs.apply_omarchy_theme("cat; rm -rf /", dry_run=False), "无效的主题标识")
+        self.assertEqual(cs.apply_omarchy_theme("-v", dry_run=False), "无效的主题标识")
 
     def test_theme_video_wallpapers_are_skipped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1395,7 +1395,7 @@ class SecurityHardeningTests(unittest.TestCase):
         }
         with self.assertRaises(cs.SyncError) as cm:
             cs.copy_mapped_file(item, "apply")
-        self.assertIn("Refusing to copy symlink", str(cm.exception))
+        self.assertIn("拒绝复制符号链接", str(cm.exception))
         self.assertFalse(dest.exists())
 
     def test_symlink_atomic_replacement_on_dst(self) -> None:
@@ -1554,7 +1554,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertLess(elapsed, 10)
         self.assertLessEqual(len(result.stdout), 10_000)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("output truncated", result.stderr)
+        self.assertIn("输出已截断", result.stderr)
 
     def test_run_bounded_passes_input_and_captures_streams(self) -> None:
         result = cs.run_bounded(
@@ -1760,13 +1760,13 @@ class SecurityHardeningTests(unittest.TestCase):
         dst = self.tmp / "out" / "f.lua"
         with self.assertRaises(cs.SyncError) as cm:
             cs.copy_mapped_file({"path": "hypr/f.lua", "repo_path": str(fifo), "local_path": str(dst)}, "apply")
-        self.assertIn("non-regular", str(cm.exception))
+        self.assertIn("非常规", str(cm.exception))
         big = self.tmp / "big.lua"
         big.write_text("x" * 100, encoding="utf-8")
         with patch.object(cs, "MAX_SYNC_FILE_BYTES", 10):
             with self.assertRaises(cs.SyncError) as cm2:
                 cs.copy_mapped_file({"path": "hypr/f.lua", "repo_path": str(big), "local_path": str(dst)}, "apply")
-        self.assertIn("oversized", str(cm2.exception))
+        self.assertIn("超限", str(cm2.exception))
         self.assertFalse(dst.exists())
 
     def test_copy_mapped_file_containment_bound_to_descriptor(self) -> None:
@@ -1783,7 +1783,7 @@ class SecurityHardeningTests(unittest.TestCase):
         item = {"path": "sub/leak.lua", "repo_path": str(clone / "sub" / "leak.lua"), "local_path": str(dst)}
         with self.assertRaises(cs.SyncError) as cm:
             cs.copy_mapped_file(item, "apply", src_root=clone)
-        self.assertIn("outside", str(cm.exception))
+        self.assertIn("超出", str(cm.exception))
         self.assertFalse(dst.exists())
         # The same copy without escaping succeeds.
         (clone / "hypr" / "ok.lua").write_text("fine", encoding="utf-8")
@@ -1822,7 +1822,7 @@ class SecurityHardeningTests(unittest.TestCase):
         )
         self.assertEqual((backup_dir / "hypr" / "a.lua").read_text(encoding="utf-8"), "keep me")
         self.assertFalse((backup_dir / "hypr" / "secret.txt").exists())
-        self.assertIn("1 files", (backup_dir / "README.txt").read_text(encoding="utf-8"))
+        self.assertIn("1 个文件", (backup_dir / "README.txt").read_text(encoding="utf-8"))
 
     def test_backup_local_bounds_copy_of_growing_file(self) -> None:
         ctx = self._ctx()
@@ -1838,7 +1838,7 @@ class SecurityHardeningTests(unittest.TestCase):
         with patch.object(cs, "MAX_SYNC_FILE_BYTES", 4), patch.object(cs, "_open_bound", fake_open_bound):
             with self.assertRaises(cs.SyncError) as cm:
                 cs.backup_local(ctx, [{"path": "hypr/grown.lua", "local_path": str(big)}])
-        self.assertIn("grew past the size limit", str(cm.exception))
+        self.assertIn("超出了大小限制", str(cm.exception))
 
     def test_copy_mapped_file_dest_containment_bound_to_descriptor(self) -> None:
         repo = self.tmp / "clone"
@@ -1855,7 +1855,7 @@ class SecurityHardeningTests(unittest.TestCase):
         item = {"path": "hypr/b.lua", "local_path": str(src), "repo_path": str(repo / "hypr" / "b.lua")}
         with self.assertRaises(cs.SyncError) as cm:
             cs.copy_mapped_file(item, "publish", src_root=self.tmp, dst_root=repo)
-        self.assertIn("outside", str(cm.exception))
+        self.assertIn("超出", str(cm.exception))
         self.assertEqual(list(outside.iterdir()), [])
         # A symlink that stays inside the root (dotfiles-style) still works,
         # and missing destination directories are created on the way.
@@ -2002,7 +2002,7 @@ class SecurityHardeningTests(unittest.TestCase):
         budget.consume(4)
         with self.assertRaises(cs.SyncError) as cm:
             budget.consume(1)
-        self.assertIn("per-operation size limit", str(cm.exception))
+        self.assertIn("单次操作上限", str(cm.exception))
         # The budget is shared across copies of one operation.
         src = self.tmp / "src.lua"
         src.write_text("x" * 100, encoding="utf-8")
@@ -2027,7 +2027,7 @@ class SecurityHardeningTests(unittest.TestCase):
         elapsed = time.monotonic() - started
         self.assertLess(elapsed, 15)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("on-disk budget", result.stderr)
+        self.assertIn("磁盘限额", result.stderr)
         # The child was stopped long before the timeout let it fill the disk.
         # Watcher samples every 250ms, so a few extra 64KiB writes after the
         # cap are expected; 32 MiB is still far under a runaway fill.
@@ -2046,7 +2046,7 @@ class SecurityHardeningTests(unittest.TestCase):
             max_disk_bytes=64 * 1024,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("on-disk budget", result.stderr)
+        self.assertIn("磁盘限额", result.stderr)
         ok = cs.run_bounded(["sh", "-c", "echo fine > small"], cwd=str(d), timeout=30, disk_root=d / "nope", max_disk_bytes=64 * 1024)
         self.assertEqual(ok.returncode, 0)
 
@@ -2056,7 +2056,7 @@ class SecurityHardeningTests(unittest.TestCase):
             with patch.object(cs, "MAX_REPO_DISK_BYTES", 4096):
                 with self.assertRaises(cs.SyncError) as cm:
                     cs.cmd_connect(env.ctx, argparse_ns(args=[f"file://{repo}"]))
-            self.assertIn("on-disk budget", str(cm.exception))
+            self.assertIn("磁盘限额", str(cm.exception))
             # The incomplete managed clone was cleaned up, the source untouched.
             self.assertFalse(env.ctx.default_clone.exists())
             self.assertTrue((repo / ".git").is_dir())
@@ -2067,7 +2067,7 @@ class SecurityHardeningTests(unittest.TestCase):
             with patch.object(cs, "MAX_REPO_DISK_BYTES", 1):
                 with self.assertRaises(cs.SyncError) as cm:
                     cs.collect_inventory(env.ctx, repo)
-            self.assertIn("on disk", str(cm.exception))
+            self.assertIn("磁盘占用", str(cm.exception))
 
     def test_apply_refuses_selection_over_aggregate_budget(self) -> None:
         with TempHome() as env:
@@ -2076,7 +2076,7 @@ class SecurityHardeningTests(unittest.TestCase):
             with patch.object(cs, "MAX_SYNC_TOTAL_BYTES", 10):
                 with self.assertRaises(cs.SyncError) as cm:
                     cs.cmd_apply(env.ctx, argparse_ns())
-            self.assertIn("per-operation size limit", str(cm.exception))
+            self.assertIn("单次操作上限", str(cm.exception))
             # Nothing was installed or backed up.
             self.assertFalse((env.home / ".config" / "hypr" / "looknfeel.lua").exists())
             self.assertEqual([p for p in (env.home / ".config").glob("omarchy-backup.*")], [])
@@ -2102,7 +2102,7 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertLess(len(out.encode("utf-8")), cs.MAX_RESPONSE_BYTES)
         data = json.loads(out)
         self.assertFalse(data["ok"])
-        self.assertIn("exceeded", data["error"])
+        self.assertIn("超出", data["error"])
 
     def test_compact_snapshot_drops_bundled_files(self) -> None:
         payload = {
@@ -2191,18 +2191,18 @@ class SemanticDiffTests(unittest.TestCase):
         write(loc, "hackerman\n")
         write(rep, "rose-pine\n")
         for status, expected in (
-            ("local", "Theme: Rose Pine → Hackerman"),
-            ("repo", "Theme: Hackerman → Rose Pine"),
-            ("both", "Theme: local Hackerman vs repo Rose Pine"),
-            ("differs", "Theme: local Hackerman vs repo Rose Pine"),
+            ("local", "主题: Rose Pine → Hackerman"),
+            ("repo", "主题: Hackerman → Rose Pine"),
+            ("both", "主题: 本机 Hackerman ↔ 仓库 Rose Pine"),
+            ("differs", "主题: 本机 Hackerman ↔ 仓库 Rose Pine"),
         ):
             with self.subTest(status=status):
                 summary, changes = cs.summarize_file_diff(cs.THEME_REL, loc, rep, status)
                 self.assertEqual(changes, [expected])
-                self.assertIn("+1, -1 lines", summary)
+                self.assertIn("+1, -1 行", summary)
         rep.unlink()
-        self.assertEqual(cs.summarize_file_diff(cs.THEME_REL, loc, rep, "added-local")[1], ["Theme: Hackerman"])
-        self.assertEqual(cs.summarize_file_diff(cs.THEME_REL, loc, rep, "repo")[1], ["Theme: Hackerman (removed)"])
+        self.assertEqual(cs.summarize_file_diff(cs.THEME_REL, loc, rep, "added-local")[1], ["主题: Hackerman"])
+        self.assertEqual(cs.summarize_file_diff(cs.THEME_REL, loc, rep, "repo")[1], ["主题: Hackerman（已删除）"])
 
     def test_shell_widget_settings_describe_tracked_limits(self) -> None:
         loc, rep = self.tmp / "local.json", self.tmp / "repo.json"
@@ -2212,23 +2212,23 @@ class SemanticDiffTests(unittest.TestCase):
             return {"bar": {"layout": {"right": [{"id": "gladimdim.ai-limits", "tracked": tracked}]}}}
         write(loc, json.dumps(shell(new), indent=2))
         write(rep, json.dumps(shell(old), indent=2))
-        label = "Bar right · gladimdim.ai-limits · tracked"
+        label = "顶栏 right · gladimdim.ai-limits · tracked"
         for status, expected in (
             ("local", f"{label}: {json.dumps(old)} → {json.dumps(new)}"),
             ("repo", f"{label}: {json.dumps(new)} → {json.dumps(old)}"),
-            ("both", f"{label}: local {json.dumps(new)} vs repo {json.dumps(old)}"),
+            ("both", f"{label}: 本机 {json.dumps(new)} ↔ 仓库 {json.dumps(old)}"),
         ):
             with self.subTest(status=status):
                 summary, changes = cs.summarize_file_diff("omarchy/shell.json", loc, rep, status)
                 self.assertEqual(changes, [expected])
-                self.assertIn("+2, -2 lines", summary)
+                self.assertIn("+2, -2 行", summary)
 
     def test_shell_widget_reorder_does_not_misattribute_settings(self) -> None:
         before = {"bar": {"layout": {"right": [{"id": "a", "size": 10}, {"id": "b", "size": 20}]}}}
         after = {"bar": {"layout": {"right": [{"id": "b", "size": 20}, {"id": "a", "size": 12}]}}}
         self.assertEqual(cs.extra_shell_changes(before, after, "local"), [
-            "Bar right widgets: a, b → b, a",
-            "Bar right · a · size: 10 → 12",
+            "顶栏 right 小组件: a, b → b, a",
+            "顶栏 right · a · size: 10 → 12",
         ])
 
     def test_shell_additional_settings_are_not_hidden_by_known_changes(self) -> None:
@@ -2237,9 +2237,9 @@ class SemanticDiffTests(unittest.TestCase):
         write(loc, json.dumps({"bar": {"position": "bottom", "height": 40}, "notifications": {"enabled": False, "sound": "bell"}}))
         _, changes = cs.summarize_file_diff("omarchy/shell.json", loc, rep, "local")
         self.assertEqual(changes, [
-            "Dock Bar: top → bottom", "bar · height: 30 → 40",
+            "顶栏: top → bottom", "bar · height: 30 → 40",
             "notifications · enabled: true → false", "notifications · sound: bell",
-            "notifications · timeout: 5 (removed)",
+            "notifications · timeout: 5（已删除）",
         ])
 
     def test_shell_json_semantic_diff(self) -> None:
@@ -2260,16 +2260,16 @@ class SemanticDiffTests(unittest.TestCase):
 
         # Incoming from repo
         summary, changes = cs.summarize_file_diff("omarchy/shell.json", loc, rep, "repo")
-        self.assertIn("Dock Bar: top → bottom", changes)
-        self.assertIn("Bar transparency: off → on", changes)
-        self.assertIn("Idle Lock: 5m → 10m", changes)
+        self.assertIn("顶栏: top → bottom", changes)
+        self.assertIn("顶栏透明度: off → on", changes)
+        self.assertIn("闲置锁定: 5m → 10m", changes)
         self.assertIn("+audio", changes)
-        self.assertIn("Dock Bar: top → bottom", summary)
+        self.assertIn("顶栏: top → bottom", summary)
 
         # Outgoing from local
         summary, changes = cs.summarize_file_diff("omarchy/shell.json", loc, rep, "local")
-        self.assertIn("Dock Bar: bottom → top", changes)
-        self.assertIn("Idle Lock: 10m → 5m", changes)
+        self.assertIn("顶栏: bottom → top", changes)
+        self.assertIn("闲置锁定: 10m → 5m", changes)
 
     def test_shell_toml_semantic_diff(self) -> None:
         loc = self.tmp / "local.toml"
@@ -2277,7 +2277,7 @@ class SemanticDiffTests(unittest.TestCase):
         loc.write_text("[font]\nbase-size = 12\n")
         rep.write_text("[font]\nbase-size = 18\n")
         summary, changes = cs.summarize_file_diff("omarchy/shell.toml", loc, rep, "repo")
-        self.assertEqual(changes, ["Font base-size: 12px → 18px"])
+        self.assertEqual(changes, ["字体基准大小: 12px → 18px"])
 
     def test_terminal_font_semantic_diff(self) -> None:
         loc = self.tmp / "local.config"
@@ -2285,8 +2285,8 @@ class SemanticDiffTests(unittest.TestCase):
         loc.write_text('font-size = 9\nfont-family = "Adwaita Mono"\n')
         rep.write_text('font-size = 12\nfont-family = "JetBrains Mono"\n')
         summary, changes = cs.summarize_file_diff("terminals/ghostty.config", loc, rep, "repo")
-        self.assertIn("Font size: 9 → 12", changes)
-        self.assertIn("Font: Adwaita Mono → JetBrains Mono", changes)
+        self.assertIn("字体大小: 9 → 12", changes)
+        self.assertIn("字体: Adwaita Mono → JetBrains Mono", changes)
 
     def test_looknfeel_semantic_diff(self) -> None:
         loc = self.tmp / "local.lua"
@@ -2294,9 +2294,9 @@ class SemanticDiffTests(unittest.TestCase):
         loc.write_text('hl.config({ general = { gaps_in = 5, gaps_out = 10, border_size = 2 }, decoration = { rounding = 8 } })\n')
         rep.write_text('hl.config({ general = { gaps_in = 0, gaps_out = 0, border_size = 1 }, decoration = { rounding = 12 } })\n')
         summary, changes = cs.summarize_file_diff("hypr/looknfeel.lua", loc, rep, "repo")
-        self.assertIn("Gaps: 5/10 → 0/0", changes)
-        self.assertIn("Border: 2px → 1px", changes)
-        self.assertIn("Corners: 8px → 12px", changes)
+        self.assertIn("间距: 5/10 → 0/0", changes)
+        self.assertIn("边框: 2px → 1px", changes)
+        self.assertIn("圆角: 8px → 12px", changes)
 
     def test_input_lua_semantic_diff(self) -> None:
         loc = self.tmp / "local.lua"
@@ -2304,8 +2304,8 @@ class SemanticDiffTests(unittest.TestCase):
         loc.write_text('hl.config({ input = { kb_layout = "us", touchpad = { tap_to_click = false } } })\n')
         rep.write_text('hl.config({ input = { kb_layout = "us,ua", touchpad = { tap_to_click = true } } })\n')
         summary, changes = cs.summarize_file_diff("hypr/input.lua", loc, rep, "repo")
-        self.assertIn("Keyboard: us → us,ua", changes)
-        self.assertIn("Tap-to-click: off → on", changes)
+        self.assertIn("键盘: us → us,ua", changes)
+        self.assertIn("轻触点击: off → on", changes)
 
     def test_generic_fallback_diff(self) -> None:
         loc = self.tmp / "local.sh"
@@ -2313,7 +2313,7 @@ class SemanticDiffTests(unittest.TestCase):
         loc.write_text("echo hello\n")
         rep.write_text("echo hello\necho world\necho again\n")
         summary, changes = cs.summarize_file_diff("bin/test.sh", loc, rep, "repo")
-        self.assertEqual(changes, ["+2, -0 lines"])
+        self.assertEqual(changes, ["+2, -0 行"])
 
 
 class DivergedCloneTests(unittest.TestCase):
@@ -2408,7 +2408,7 @@ class DivergedCloneTests(unittest.TestCase):
 
             with self.assertRaises(cs.SyncError) as caught:
                 cs.cmd_publish(env.ctx, argparse_ns(dry_run=True))
-            self.assertIn("uncommitted changes", str(caught.exception))
+            self.assertIn("未提交的改动", str(caught.exception))
 
 
 class RemovalSyncTests(unittest.TestCase):
@@ -2446,7 +2446,7 @@ class RemovalSyncTests(unittest.TestCase):
                 self.assertFalse(f["default_publish"])
             bundle = next(b for b in snap["diff"]["bundles"] if b.get("plugin_id") == "demo.widget")
             self.assertTrue(bundle["removal"])
-            self.assertEqual(bundle["summary"], "Removed here · 2 files")
+            self.assertEqual(bundle["summary"], "本机已删除 · 2 个文件")
             self.assertFalse(bundle["default_publish"])
 
     def test_publishing_a_removal_deletes_it_from_the_repo(self) -> None:
@@ -2458,7 +2458,7 @@ class RemovalSyncTests(unittest.TestCase):
             self.assertEqual(sorted(pub["removed"]), ["plugins/demo.widget/Main.qml", "plugins/demo.widget/manifest.json"])
             self.assertTrue(pub["committed"])
             self.assertFalse((repo / "plugins" / "demo.widget").exists(), "empty plugin dir should be pruned")
-            self.assertIn("removed plugins/demo.widget", git(repo, "log", "-1", "--pretty=%B").stdout)
+            self.assertIn("已删除 plugins/demo.widget", git(repo, "log", "-1", "--pretty=%B").stdout)
             # The baseline is cleared, so the rows stop reappearing forever.
             after = cs.cmd_snapshot(env.ctx, argparse_ns())
             self.assertEqual([f for f in after["diff"]["files"] if f["path"].startswith("plugins/demo.widget")], [])
@@ -2473,7 +2473,7 @@ class RemovalSyncTests(unittest.TestCase):
             snap = cs.cmd_snapshot(env.ctx, argparse_ns())
             bundle = next(b for b in snap["diff"]["bundles"] if b.get("plugin_id") == "demo.widget")
             self.assertTrue(bundle["removal"])
-            self.assertEqual(bundle["summary"], "Removed in the repo · 2 files")
+            self.assertEqual(bundle["summary"], "仓库已删除 · 2 个文件")
             self.assertFalse(bundle["default_apply"])
 
             ap = cs.cmd_apply(env.ctx, argparse_ns(explicit=True, plugin=["demo.widget"]))
@@ -2600,7 +2600,7 @@ class SourceArgumentTests(unittest.TestCase):
     def test_connect_stdin_with_blank_line_fails_fast(self) -> None:
         code, payload = self._cli(["connect", "--stdin"], stdin_data="\n", close_stdin=False)
         self.assertEqual(code, 1)
-        self.assertIn("Paste a git URL", payload.get("error", ""))
+        self.assertIn("请粘贴 git URL", payload.get("error", ""))
 
     def test_read_source_argument_prefers_stdin_line(self) -> None:
         with patch("sys.stdin", io.StringIO("https://github.com/a/b.git\nignored\n")):

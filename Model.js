@@ -2,27 +2,27 @@
 
 function repoName(url) {
   var raw = String(url || "").replace(/\/+$/, "")
-  if (!raw) return "Config repo"
+  if (!raw) return "配置仓库"
   raw = raw.replace(/\.git$/, "")
   var slash = raw.lastIndexOf("/")
   if (slash !== -1) raw = raw.substring(slash + 1)
   var colon = raw.lastIndexOf(":")
   if (colon !== -1 && raw.indexOf("/") === -1) raw = raw.substring(colon + 1)
-  return raw || "Config repo"
+  return raw || "配置仓库"
 }
 
 function stateTitle(state) {
   switch (String(state || "")) {
-    case "in-sync": return "In sync"
-    case "ready": return "Ready to apply"
-    case "empty": return "Linked · ready for first push"
-    case "local-ahead": return "Local changes"
-    case "remote-ahead": return "Incoming updates"
-    case "diverged": return "Both sides changed"
-    case "conflicts": return "Merge conflicts"
-    case "invalid": return "Not an Omarchy config"
-    case "not-configured": return "Not linked"
-    default: return "Omarchy Config Sync"
+    case "in-sync": return "已同步"
+    case "ready": return "待应用"
+    case "empty": return "空仓库 — 从本机初始化"
+    case "local-ahead": return "本机有变更"
+    case "remote-ahead": return "有传入更新"
+    case "diverged": return "两侧均有改动"
+    case "conflicts": return "合并冲突"
+    case "invalid": return "不是 Omarchy 配置仓库"
+    case "not-configured": return "未链接"
+    default: return "Omarchy 配置同步"
   }
 }
 
@@ -33,25 +33,23 @@ function stateHint(state, status) {
   var differs = status && status.unknown_differs ? Number(status.unknown_differs) : 0
   switch (String(state || "")) {
     case "in-sync":
-      return "This machine matches the linked config repo."
+      return "本机与已链接的配置仓库一致。"
     case "empty":
-      return "Connected. The repo is empty (or only has a README), so one step is left: seed it from this machine. The tabs show what this machine would push."
+      return "这个 GitHub 仓库是空的（或只有 README）。标签页显示本机内容。点击「发布本机」初始化私有仓库，然后在其他机器上使用「应用」。"
     case "ready":
-      return "The repo looks like Omarchy config. Review shortcuts, plugins, and files, then Apply to this machine — or Publish if this machine is the source of truth."
+      return "仓库内容是 Omarchy 配置。检查快捷键、插件与文件后点击「应用」同步到本机——若本机才是最新来源，则点「发布」。"
     case "local-ahead":
-      return localN === 1
-        ? "1 local change is not in the repo yet. Publish to share it with your other machines."
-        : localN + " local changes are not in the repo yet. Publish to share them with your other machines."
+      return "本机有 " + localN + " 处变更尚未进入仓库，发布后其他机器即可同步。"
     case "remote-ahead":
-      return "The repo has config this machine has not applied. Review the incoming files, then Apply."
+      return "仓库中有本机尚未应用的配置，检查传入文件后点击「应用」。"
     case "diverged":
-      return "This machine and the repo both moved. Review Changes to pick a side item by item, or Resync from repo to make this machine match git (usual on a second machine)."
+      return "本机与仓库都有改动。在「查看变更」中逐项选择保留哪一侧，或点「从仓库重新同步」让本机与 git 一致（第二台机器常用）。"
     case "conflicts":
-      return "Git could not merge automatically. Keep the local copy or take the incoming copy for each conflicted file."
+      return "git 无法自动合并。请为每个冲突文件选择保留本机副本或采用传入副本。"
     case "invalid":
-      return "The linked git repo is missing Hyprland / Omarchy config files."
+      return "链接的 git 仓库缺少 Hyprland / Omarchy 配置文件。"
     default:
-      return "Paste the git URL of your omarchy-config repo to get started."
+      return "粘贴你的 omarchy-config 仓库 git URL 开始使用。"
   }
 }
 
@@ -60,35 +58,35 @@ function fileStatusLabel(status, removal) {
     // The file is gone from one side. Syncing it deletes, it does not copy.
     switch (String(status || "")) {
       case "local":
-      case "added-local": return "Removed here"
+      case "added-local": return "本机已删除"
       case "repo":
-      case "added-repo": return "Removed in repo"
+      case "added-repo": return "仓库已删除"
     }
   }
   switch (String(status || "")) {
-    case "local": return "Local only"
-    case "added-local": return "New on this machine"
-    case "repo": return "Incoming"
-    case "added-repo": return "New in repo"
-    case "both": return "Both changed"
-    case "differs": return "Different"
-    case "identical": return "In sync"
-    case "machine": return "This machine"
+    case "local": return "仅本机"
+    case "added-local": return "本机新增"
+    case "repo": return "传入"
+    case "added-repo": return "仓库新增"
+    case "both": return "两侧均已修改"
+    case "differs": return "有差异"
+    case "identical": return "已同步"
+    case "machine": return "本机"
     default: return String(status || "")
   }
 }
 
 // Join a row's status label to its summary without saying the same thing twice.
 // A bundle's summary comes from the backend already opening with its own status
-// ("Removed here · 11 files"), so prefixing the label again renders as
-// "Removed here · Removed here · 11 files". A loose file's summary does not, and
+// ("本机已删除 · 11 个文件"), so prefixing the label again renders as
+// "本机已删除 · 本机已删除 · 11 个文件". A loose file's summary does not, and
 // still wants the prefix.
 function statusPrefix(statusLabel, summary) {
   var st = String(statusLabel || "")
   if (!st) return ""
   var sum = String(summary || "")
   // Nothing to separate the label from: return it bare rather than leaving a
-  // dangling "Removed here · " on a row whose summary is empty.
+  // dangling "本机已删除 · " on a row whose summary is empty.
   if (!sum) return st
   if (sum === st || sum.indexOf(st + " ") === 0) return ""
   return st + " · "
@@ -260,7 +258,7 @@ function appendThemes(out, list, hiddenMap) {
     var t = rows[i]
     var id = t.id || "selected"
     if (isItemHidden("t", id, hiddenMap, t)) continue
-    out.push(reviewItem("t", id, t.display || t.slug, t.semantic_summary || t.slug, t.status, "Theme", t.status === "both", 0, false, t.changes || []))
+    out.push(reviewItem("t", id, t.display || t.slug, t.semantic_summary || t.slug, t.status, "主题", t.status === "both", 0, false, t.changes || []))
   }
 }
 
@@ -272,7 +270,7 @@ function appendShortcuts(out, list, summaryField, both, hiddenMap) {
     var sum = (summaryField === "detail" || s.portable === false)
       ? (s.detail || s.skip_reason || s.label || "")
       : (s.label || "")
-    var row = reviewItem("s", s.keys, s.keys, sum, s.status, "Shortcut", both || s.status === "both", 0, false)
+    var row = reviewItem("s", s.keys, s.keys, sum, s.status, "快捷键", both || s.status === "both", 0, false)
     // Non-portable binds depend on surrounding Lua declarations and cannot be
     // cherry-picked safely. Keep them visible as an explanation without
     // presenting an Include control that the backend would silently ignore.
@@ -286,9 +284,9 @@ function appendBundles(out, list, both, hiddenMap) {
   for (var i = 0; i < rows.length; i++) {
     var b = rows[i]
     if (isItemHidden("g", b.id, hiddenMap, b)) continue
-    var typeLabel = b.kind === "plugin" ? "Plugin" : "Folder"
+    var typeLabel = b.kind === "plugin" ? "插件" : "文件夹"
     var n = Number(b.changed_count || (b.files ? b.files.length : 0) || 0)
-    var sum = b.summary || (n + (n === 1 ? " file" : " files"))
+    var sum = b.summary || (n + (n === 1 ? " 个文件" : " 个文件"))
     var bundleRow = reviewItem("g", b.id, b.name || b.plugin_id || b.id, sum, b.status, typeLabel, both || b.status === "both", n, false)
     bundleRow.removal = !!b.removal
     out.push(bundleRow)
@@ -322,7 +320,7 @@ function appendLooseFiles(out, files, both, hiddenMap) {
     if (!p || isBundledPath(p) || p.indexOf("plugins/gladimdim.config-sync") === 0) continue
     if (isItemHidden("f", p, hiddenMap, f)) continue
     var sum = f.semantic_summary || f.summary || ""
-    var fileRow = reviewItem("f", p, p, sum, f.status, "File", both || f.status === "both", 0, false, f.changes || [])
+    var fileRow = reviewItem("f", p, p, sum, f.status, "文件", both || f.status === "both", 0, false, f.changes || [])
     fileRow.removal = !!f.removal
     out.push(fileRow)
   }
@@ -376,7 +374,7 @@ function buildHiddenItems(theme, shortcuts, bundles, files, allFiles, hiddenMap,
     var t = tList[ti]
     var tid = t.id || "selected"
     if (isItemHidden("t", tid, hiddenMap, t)) {
-      addHidden("t", tid, t.display || t.slug, t.slug, t.status, "Theme", t.status === "both", 0)
+      addHidden("t", tid, t.display || t.slug, t.slug, t.status, "主题", t.status === "both", 0)
     }
   }
 
@@ -384,7 +382,7 @@ function buildHiddenItems(theme, shortcuts, bundles, files, allFiles, hiddenMap,
   for (var si = 0; si < sList.length; si++) {
     var s = sList[si]
     if (isItemHidden("s", s.keys, hiddenMap, s)) {
-      addHidden("s", s.keys, s.keys, s.label || s.detail || "", s.status, "Shortcut", s.status === "both", 0)
+      addHidden("s", s.keys, s.keys, s.label || s.detail || "", s.status, "快捷键", s.status === "both", 0)
     }
   }
 
@@ -392,9 +390,9 @@ function buildHiddenItems(theme, shortcuts, bundles, files, allFiles, hiddenMap,
   for (var bi = 0; bi < bList.length; bi++) {
     var b = bList[bi]
     if (isItemHidden("g", b.id, hiddenMap, b)) {
-      var typeLabel = b.kind === "plugin" ? "Plugin" : "Folder"
+      var typeLabel = b.kind === "plugin" ? "插件" : "文件夹"
       var n = Number(b.changed_count || (b.files ? b.files.length : 0) || 0)
-      var sum = b.summary || (n + (n === 1 ? " file" : " files"))
+      var sum = b.summary || (n + (n === 1 ? " 个文件" : " 个文件"))
       addHidden("g", b.id, b.name || b.plugin_id || b.id, sum, b.status, typeLabel, b.status === "both", n, b.removal)
     }
   }
@@ -422,7 +420,7 @@ function buildHiddenItems(theme, shortcuts, bundles, files, allFiles, hiddenMap,
           parentHidden = true
       }
       if (!parentHidden) {
-        addHidden("f", p, p, f.summary || "", f.status, "File", f.status === "both", 0, f.removal)
+        addHidden("f", p, p, f.summary || "", f.status, "文件", f.status === "both", 0, f.removal)
       }
     }
   }
@@ -435,14 +433,14 @@ function countBy(files, statuses) {
 }
 
 function relativeAgo(iso) {
-  if (!iso) return "never"
+  if (!iso) return "从未"
   var then = Date.parse(iso)
   if (!isFinite(then)) return iso
   var seconds = Math.max(0, Math.floor((Date.now() - then) / 1000))
-  if (seconds < 60) return "just now"
-  if (seconds < 3600) return Math.floor(seconds / 60) + "m ago"
-  if (seconds < 86400) return Math.floor(seconds / 3600) + "h ago"
-  return Math.floor(seconds / 86400) + "d ago"
+  if (seconds < 60) return "刚刚"
+  if (seconds < 3600) return Math.floor(seconds / 60) + " 分钟前"
+  if (seconds < 86400) return Math.floor(seconds / 3600) + " 小时前"
+  return Math.floor(seconds / 86400) + " 天前"
 }
 
 function pluginActionLabel(action) {
