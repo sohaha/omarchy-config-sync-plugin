@@ -456,7 +456,7 @@ function pluginActionIcon(action) {
 }
 
 function pluginActionTip(action) {
-  if (action === "update") return "Open Omarchy's plugin updater in a terminal"
-  if (action === "reinstall") return "Move this plain copy to a backup and install it from git in a terminal"
-  return "Open Omarchy's plugin installer in a terminal"
+  if (action === "update") return "在终端里打开 Omarchy 的插件更新器"
+  if (action === "reinstall") return "在终端里把这份普通文件副本移到备份处，再从 git 安装"
+  return "在终端里打开 Omarchy 的插件安装器"
 }

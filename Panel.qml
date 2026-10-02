@@ -1356,23 +1356,23 @@ Panel {
 
         GuideStep {
           step: "✓"
-          title: "Repo linked"
-          body: Model.repoName(root.status && root.status.repo_url) + " is connected and empty. Nothing has been pushed yet."
+          title: "仓库已连接"
+          body: Model.repoName(root.status && root.status.repo_url) + " 已连接，且是一个空仓库，尚未推送任何内容。"
         }
         GuideStep {
           step: "2"
-          title: "Check what goes up"
-          body: root.outgoingPicked + " of " + root.outgoingCount + " items from this machine are ticked. Review list shows them. Display layout stays local unless you opt in."
+          title: "检查要上传的内容"
+          body: "本机 " + root.outgoingCount + " 项内容中已勾选 " + root.outgoingPicked + " 项，可在「查看列表」中逐一确认。显示器布局默认只留在本机，除非你主动勾选。"
         }
         GuideStep {
           step: "3"
-          title: "Seed the repo"
-          body: "Pushes the ticked items as the first commit. The repo stays private. On your next machine: Connect the same URL, then Apply."
+          title: "初始化仓库"
+          body: "把勾选的内容作为首次提交推送，仓库始终保持私有。换到下一台机器时：连接同一个 URL，然后点「应用」。"
         }
         Row {
           spacing: Style.space(8)
           Button {
-            text: "Seed repo (" + root.outgoingPicked + " items)"
+            text: "初始化仓库（" + root.outgoingPicked + " 项）"
             iconText: "󰓂"
             tooltipText: "Push this machine's ticked items as the repo's first commit (p)"
             foreground: root.foreground
@@ -1383,7 +1383,7 @@ Panel {
             onClicked: root.requestPublish()
           }
           Button {
-            text: "Review list"
+            text: "查看列表"
             iconText: "󰦓"
             tooltipText: "Tick or untick items before seeding (c)"
             foreground: root.foreground
@@ -1704,7 +1704,7 @@ Panel {
         visible: !root.showingHidden && root.syncState === "empty"
         width: parent.width
         textFormat: Text.PlainText
-        text: "First push: every ticked item under Outgoing becomes the repo's first commit. Untick anything you do not want on GitHub, then Seed repo."
+        text: "首次推送：「传出」里每个勾选项都会成为仓库的首次提交。不想上传到 GitHub 的内容请先取消勾选，再点「初始化仓库」。"
         color: root.accent
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
@@ -2182,7 +2182,7 @@ Panel {
             }
             Button {
               visible: !!modelData.git && !modelData.installed && String(modelData.source || "") !== ""
-              text: "Install"
+              text: "安装"
               iconText: "󰏗"
               tooltipText: "Open Omarchy's plugin installer in a terminal"
               bordered: true
@@ -2938,7 +2938,7 @@ Panel {
       visible: sectionRoot.expanded && sectionRoot.mixed && sectionRoot.bulkPickable
       spacing: Style.space(6)
       Button {
-        text: "Select all"
+        text: "全选"
         iconText: "󰒆"
         tooltipText: "Tick every item in " + sectionRoot.title
         fontSize: Style.font.caption
@@ -2949,7 +2949,7 @@ Panel {
         onClicked: root.pickItems(sectionRoot.files, true)
       }
       Button {
-        text: "Select none"
+        text: "全不选"
         iconText: "󰒇"
         tooltipText: "Untick every item in " + sectionRoot.title
         fontSize: Style.font.caption
